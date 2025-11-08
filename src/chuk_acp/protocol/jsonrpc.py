@@ -212,15 +212,15 @@ def parse_message(
     # Determine message type based on fields
     if has_method and has_id:
         # Request
-        return JSONRPCRequest.model_validate(data)  # type: ignore[no-any-return]
+        return JSONRPCRequest.model_validate(data)
     elif has_method and not has_id:
         # Notification
-        return JSONRPCNotification.model_validate(data)  # type: ignore[no-any-return]
+        return JSONRPCNotification.model_validate(data)
     elif has_id and has_result and not has_error:
         # Success response
-        return JSONRPCResponse.model_validate(data)  # type: ignore[no-any-return]
+        return JSONRPCResponse.model_validate(data)
     elif has_id and has_error and not has_result:
         # Error response
-        return JSONRPCError.model_validate(data)  # type: ignore[no-any-return]
+        return JSONRPCError.model_validate(data)
     else:
         raise InvalidRequest("Invalid JSON-RPC message structure")

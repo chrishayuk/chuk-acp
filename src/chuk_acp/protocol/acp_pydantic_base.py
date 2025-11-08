@@ -7,7 +7,7 @@ try:
 
     PYDANTIC_AVAILABLE = True
 
-    class AcpPydanticBase(BaseModel):  # type: ignore[misc]
+    class AcpPydanticBase(BaseModel):
         """Base Pydantic model for ACP types."""
 
         model_config = ConfigDict(extra="allow")

@@ -628,9 +628,7 @@ class TestParseMessageErrors:
         import pytest
 
         with pytest.raises(InvalidRequest):
-            parse_message(
-                {"jsonrpc": "1.0", "id": "1", "method": "test"}  # Wrong version
-            )
+            parse_message({"jsonrpc": "1.0", "id": "1", "method": "test"})  # Wrong version
 
     def test_parse_invalid_message_structure(self):
         """Test parsing message with invalid field combination."""

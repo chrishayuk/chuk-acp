@@ -153,13 +153,13 @@ class TestPermissionTypes:
 
     def test_permission_request_creation(self):
         """Test PermissionRequest creation."""
-        req = PermissionRequest(action="read_file", description="Read config")
+        req = PermissionRequest(id="perm-test", action="read_file", description="Read config")
         assert req.action == "read_file"
         assert req.description == "Read config"
 
     def test_permission_request_serialization(self):
         """Test PermissionRequest serialization."""
-        req = PermissionRequest(action="write_file", description="Write log")
+        req = PermissionRequest(id="perm-test", action="write_file", description="Write log")
         data = req.model_dump()
         assert data["action"] == "write_file"
         assert data["description"] == "Write log"
@@ -188,31 +188,31 @@ class TestTerminalTypes:
 
     def test_terminal_info_creation(self):
         """Test TerminalInfo creation."""
-        info = TerminalInfo(id="term-1")
+        info = TerminalInfo(id="term-1", command="bash")
         assert info.id == "term-1"
 
     def test_terminal_info_serialization(self):
         """Test TerminalInfo serialization."""
-        info = TerminalInfo(id="term-2")
+        info = TerminalInfo(id="term-2", command="bash")
         data = info.model_dump()
         assert data["id"] == "term-2"
 
     def test_terminal_exit_creation(self):
         """Test TerminalExit creation."""
-        exit_info = TerminalExit(exitCode=0)
+        exit_info = TerminalExit(id="term-1", exitCode=0)
         assert exit_info.exitCode == 0
 
     def test_terminal_exit_non_zero(self):
         """Test TerminalExit with non-zero code."""
-        exit_info = TerminalExit(exitCode=1)
+        exit_info = TerminalExit(id="term-1", exitCode=1)
         data = exit_info.model_dump()
         assert data["exitCode"] == 1
 
     def test_terminal_output_creation(self):
         """Test TerminalOutput creation."""
-        output = TerminalOutput(id="term-1", data="output text")
+        output = TerminalOutput(id="term-1", output="output text")
         assert output.id == "term-1"
-        assert output.data == "output text"
+        assert output.output == "output text"
 
 
 class TestCommandTypes:
@@ -237,36 +237,36 @@ class TestPlanTypes:
 
     def test_plan_entry_creation(self):
         """Test PlanEntry creation."""
-        entry = PlanEntry(description="Implement feature", status="pending")
-        assert entry.description == "Implement feature"
+        entry = PlanEntry(content="Implement feature", status="pending", priority="medium")
+        assert entry.content == "Implement feature"
         assert entry.status == "pending"
 
     def test_plan_entry_completed(self):
         """Test PlanEntry with completed status."""
-        entry = PlanEntry(description="Fix bug", status="completed")
+        entry = PlanEntry(content="Fix bug", status="completed", priority="medium")
         data = entry.model_dump()
         assert data["status"] == "completed"
 
     def test_plan_entry_serialization(self):
         """Test PlanEntry serialization."""
-        entry = PlanEntry(description="Write tests", status="in_progress")
+        entry = PlanEntry(content="Write tests", status="in_progress", priority="medium")
         data = entry.model_dump()
-        assert data["description"] == "Write tests"
+        assert data["content"] == "Write tests"
         assert data["status"] == "in_progress"
 
     def test_plan_creation(self):
         """Test Plan creation."""
         plan = Plan(
             entries=[
-                PlanEntry(description="Task 1", status="pending"),
-                PlanEntry(description="Task 2", status="completed"),
+                PlanEntry(content="Task 1", status="pending", priority="medium"),
+                PlanEntry(content="Task 2", status="completed", priority="medium"),
             ]
         )
         assert len(plan.entries) == 2
 
     def test_plan_serialization(self):
         """Test Plan serialization."""
-        plan = Plan(entries=[PlanEntry(description="Task", status="pending")])
+        plan = Plan(entries=[PlanEntry(content="Task", status="pending", priority="medium")])
         data = plan.model_dump()
         assert "entries" in data
         assert len(data["entries"]) == 1
@@ -277,23 +277,23 @@ class TestToolTypes:
 
     def test_tool_call_creation(self):
         """Test ToolCall creation."""
-        call = ToolCall(id="call-1", name="test_tool", status="pending", input={"arg": "value"})
+        call = ToolCall(id="call-1", name="test_tool", status="pending", arguments={"arg": "value"})
         assert call.id == "call-1"
         assert call.name == "test_tool"
         assert call.status == "pending"
 
     def test_tool_call_serialization(self):
         """Test ToolCall serialization."""
-        call = ToolCall(id="c1", name="tool", status="success", input={})
+        call = ToolCall(id="c1", name="tool", status="completed", arguments={})
         data = call.model_dump()
         assert data["id"] == "c1"
-        assert data["status"] == "success"
+        assert data["status"] == "completed"
 
     def test_tool_call_update_creation(self):
         """Test ToolCallUpdate creation."""
-        update = ToolCallUpdate(id="call-1", status="running")
+        update = ToolCallUpdate(id="call-1", status="in_progress")
         assert update.id == "call-1"
-        assert update.status == "running"
+        assert update.status == "in_progress"
 
 
 class TestMcpServerTypes:
@@ -354,9 +354,9 @@ class TestTypesIntegration:
         """Test Plan with multiple entries."""
         plan = Plan(
             entries=[
-                PlanEntry(description="Task 1", status="completed"),
-                PlanEntry(description="Task 2", status="in_progress"),
-                PlanEntry(description="Task 3", status="pending"),
+                PlanEntry(content="Task 1", status="completed", priority="medium"),
+                PlanEntry(content="Task 2", status="in_progress", priority="medium"),
+                PlanEntry(content="Task 3", status="pending", priority="medium"),
             ]
         )
         assert len(plan.entries) == 3

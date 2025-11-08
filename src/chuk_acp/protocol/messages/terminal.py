@@ -51,7 +51,7 @@ async def send_terminal_create(
         timeout=timeout,
     )
 
-    return TerminalInfo.model_validate(result)  # type: ignore[no-any-return]
+    return TerminalInfo.model_validate(result)
 
 
 async def send_terminal_output(
@@ -141,7 +141,7 @@ async def send_terminal_wait_for_exit(
         timeout=timeout,
     )
 
-    return TerminalExit.model_validate(result)  # type: ignore[no-any-return]
+    return TerminalExit.model_validate(result)
 
 
 async def send_terminal_kill(

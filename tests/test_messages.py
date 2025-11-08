@@ -27,6 +27,8 @@ from chuk_acp.protocol.types import (
     ClientInfo,
     ClientCapabilities,
     TextContent,
+    Plan,
+    PlanEntry,
 )
 from chuk_acp.protocol.jsonrpc import create_response
 
@@ -223,7 +225,9 @@ class TestSessionMessages:
 
             from chuk_acp.protocol.types import PermissionRequest
 
-            perm_req = PermissionRequest(action="read_file", description="Read config file")
+            perm_req = PermissionRequest(
+                id="perm-1", action="read_file", description="Read config file"
+            )
 
             result = await send_session_request_permission(
                 recv_stream, send_stream, session_id="session-123", request=perm_req
@@ -293,13 +297,17 @@ class TestSessionMessages:
         send_stream, recv_stream = anyio.create_memory_object_stream(10)
 
         from chuk_acp.protocol.types import (
-            Plan,
             ToolCall,
             ToolCallUpdate,
             AvailableCommand,
         )
 
-        plan = Plan(tasks=["task1", "task2"], currentTask="task1")
+        plan = Plan(
+            entries=[
+                PlanEntry(content="task1", status="pending", priority="high"),
+                PlanEntry(content="task2", status="pending", priority="medium"),
+            ]
+        )
         agent_msg = TextContent(text="Processing...")
         user_msg = TextContent(text="User input")
         tool_call = ToolCall(id="tool-1", name="test_tool", arguments={})
@@ -387,7 +395,7 @@ class TestTerminalMessages:
             assert req.method == "terminal/create"
             assert req.params["command"] == "bash"
 
-            resp = create_response(id=req.id, result={"id": "term-123"})
+            resp = create_response(id=req.id, result={"id": "term-123", "command": "bash"})
             await recv_send.send(resp)
 
         async with anyio.create_task_group() as tg:
@@ -439,7 +447,7 @@ class TestTerminalMessages:
             assert req.method == "terminal/wait_for_exit"
             assert req.params["id"] == "term-123"
 
-            resp = create_response(id=req.id, result={"exitCode": 0})
+            resp = create_response(id=req.id, result={"id": "term-1", "exitCode": 0})
             await recv_send.send(resp)
 
         async with anyio.create_task_group() as tg:
