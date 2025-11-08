@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chuk-acp"
+version = "0.1.0"
+description = "Agent Client Protocol (ACP) implementation for Python"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Christopher Hay", email = "chris@chuk.ai"},
+]
+keywords = ["acp", "agent-client-protocol", "ai", "coding-agent", "editor"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Interpreters",
+]
+
+dependencies = [
+    "anyio>=4.0.0",
+    "typing-extensions>=4.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "coverage>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "bandit>=1.7.0",
+    "twine>=4.0.0",
+]
+pydantic = [
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/chuk-ai/chuk-acp"
+Documentation = "https://agentclientprotocol.com"
+Repository = "https://github.com/chuk-ai/chuk-acp"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chuk_acp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "pydantic"
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/chuk_acp"]
+omit = [
+    "tests/*",
+    "examples/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
