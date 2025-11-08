@@ -154,36 +154,98 @@ uv pip install -e ".[dev,pydantic]"
 
 ## Quick Start
 
-Get started with chuk-acp in 5 minutes with these simple, self-contained examples!
+### The Easiest Way: ACPClient
 
-### Option A: Using the Provided Examples (Easiest)
+The fastest way to get started is with the high-level `ACPClient`, which handles all protocol details automatically:
 
-The fastest way to see ACP in action:
+**Option A: Direct Usage**
+```python
+"""quickstart.py"""
+import anyio
+from chuk_acp import ACPClient
+
+async def main():
+    # Connect to an agent - handles initialization, sessions, everything!
+    async with ACPClient("python", ["echo_agent.py"]) as client:
+        # Send a prompt and get the response
+        result = await client.send_prompt("Hello!")
+        print(f"Agent: {result.full_message}")
+
+anyio.run(main)
+```
+
+**Option B: Using Standard ACP Configuration**
+
+This matches the configuration format used by editors like Zed, VSCode, etc.:
+
+```python
+"""quickstart_config.py"""
+import anyio
+from chuk_acp import ACPClient, AgentConfig
+
+async def main():
+    # Standard ACP configuration format
+    config = AgentConfig(
+        command="kimi",           # Any ACP-compatible agent
+        args=["--acp"],          # Agent-specific arguments
+        env={"DEBUG": "true"}    # Optional environment variables
+    )
+
+    async with ACPClient.from_config(config) as client:
+        result = await client.send_prompt("Hello!")
+        print(f"Agent: {result.full_message}")
+
+anyio.run(main)
+```
+
+Or load from a JSON file (like `~/.config/zed/settings.json`):
+
+```python
+from chuk_acp import load_agent_config
+
+config = load_agent_config("~/.config/my-app/agent.json")
+async with ACPClient.from_config(config) as client:
+    result = await client.send_prompt("Hello!")
+```
+
+**What `ACPClient` does automatically:**
+- ✅ Starts the agent process
+- ✅ Handles protocol initialization
+- ✅ Creates and manages sessions
+- ✅ Captures all notifications
+- ✅ Cleans up resources
+- ✅ Supports standard ACP configuration format
+
+**Want more control?** The low-level API gives you fine-grained control over the protocol. See the examples below.
+
+---
+
+### More Examples
+
+For more complete examples showing different use cases:
 
 ```bash
+# Clone the repository
+git clone https://github.com/chuk-ai/chuk-acp.git
+cd chuk-acp
+
 # Install
-uv pip install chuk-acp[pydantic]
+uv pip install -e ".[pydantic]"
 
-# Run the quick start example
-uv run python examples/quick_start.py
+# Run examples (all use the high-level ACPClient)
+uv run python examples/simple_client.py   # Basic single prompt
+uv run python examples/quick_start.py     # Multi-turn conversation
+uv run python examples/config_example.py  # Configuration support (Zed/VSCode format)
+
+# Advanced: Low-level protocol examples
+uv run python examples/low_level/simple_client.py        # Manual protocol handling
+uv run python examples/low_level/quick_start.py          # Self-contained with embedded agent
+uv run python examples/low_level/comprehensive_demo.py   # All ACP features
 ```
 
-**Output:**
-```
-=== ACP Quick Start ===
+See the [examples directory](https://github.com/chuk-ai/chuk-acp/tree/main/examples) for detailed documentation.
 
-1. Creating agent server...
-2. Connecting to agent...
-3. Initializing protocol...
-   Connected to: echo-agent
-4. Creating session...
-   Session ID: session-1
-5. Sending prompt...
-   User: Hello, Agent!
-   Agent: Echo: Hello, Agent!
-
-✓ Success!
-```
+> **Note**: Examples are in the GitHub repository. If you installed via pip, clone the repo to access them.
 
 ### Option B: Build Your Own (10 Minutes)
 
@@ -265,75 +327,21 @@ for line in sys.stdin:
 Save this as `my_client.py`:
 
 ```python
-"""my_client.py - Connect to the echo agent"""
-import asyncio
-import uuid
+"""my_client.py - Connect to the echo agent using ACPClient"""
 import anyio
-
-from chuk_acp import stdio_transport, send_initialize, send_session_new
-from chuk_acp.protocol import (
-    create_request,
-    JSONRPCNotification,
-    JSONRPCResponse,
-    METHOD_SESSION_PROMPT,
-    METHOD_SESSION_UPDATE,
-)
-from chuk_acp.protocol.types import ClientInfo, ClientCapabilities, TextContent
+from chuk_acp import ACPClient
 
 
 async def main():
-    # Connect to the agent
-    async with stdio_transport("python", ["echo_agent.py"]) as (read, write):
-        # Initialize
-        init = await send_initialize(
-            read,
-            write,
-            protocol_version=1,
-            client_info=ClientInfo(name="my-client", version="1.0.0"),
-            capabilities=ClientCapabilities(),
-        )
-        print(f"✓ Connected to {init.agentInfo.name}")
-
-        # Create session
-        session = await send_session_new(read, write, cwd="/tmp")
-        print(f"✓ Session: {session.sessionId}")
-
-        # Send prompt and capture the echo response
-        print("\nSending: Hello!")
-        request = create_request(
-            method=METHOD_SESSION_PROMPT,
-            params={
-                "sessionId": session.sessionId,
-                "prompt": [TextContent(text="Hello!").model_dump()],
-            },
-            id=str(uuid.uuid4()),
-        )
-        await write.send(request)
-
-        # Listen for the agent's response
-        agent_message = ""
-        with anyio.fail_after(10.0):
-            while True:
-                msg = await read.receive()
-
-                # Capture session/update notification
-                if isinstance(msg, JSONRPCNotification) and msg.method == METHOD_SESSION_UPDATE:
-                    params = msg.params or {}
-                    if "agentMessageChunk" in params:
-                        chunk = params["agentMessageChunk"]
-                        if "text" in chunk:
-                            agent_message = chunk["text"]
-
-                # Wait for final response
-                if isinstance(msg, JSONRPCResponse) and msg.id == request.id:
-                    break
-
-        print(f"Agent says: {agent_message}")
-        print("✓ Done!")
+    # Connect to the agent - handles everything automatically!
+    async with ACPClient("python", ["echo_agent.py"]) as client:
+        # Send a prompt and get the response
+        result = await client.send_prompt("Hello!")
+        print(f"Agent says: {result.full_message}")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    anyio.run(main())
 ```
 
 #### Step 4: Run It!
@@ -367,9 +375,11 @@ Agent says: Echo: Hello!
 ### Next Steps
 
 **Explore More Features:**
-- [examples/simple_client.py](examples/simple_client.py) - Clean client with notification handling
-- [examples/echo_agent.py](examples/echo_agent.py) - Production-ready agent with error handling
-- [examples/comprehensive_demo.py](examples/comprehensive_demo.py) - Filesystem, terminal, all ACP features
+
+Check out the complete examples in the [GitHub repository](https://github.com/chuk-ai/chuk-acp/tree/main/examples):
+- [simple_client.py](https://github.com/chuk-ai/chuk-acp/blob/main/examples/simple_client.py) - Clean client with notification handling
+- [echo_agent.py](https://github.com/chuk-ai/chuk-acp/blob/main/examples/echo_agent.py) - Production-ready agent with error handling
+- [comprehensive_demo.py](https://github.com/chuk-ai/chuk-acp/blob/main/examples/comprehensive_demo.py) - Filesystem, terminal, all ACP features
 
 **Build Something:**
 - Add file system access to your agent (see Example 3 below)
@@ -729,6 +739,87 @@ asyncio.run(main())
 ---
 
 ## API Reference
+
+### High-Level Client
+
+The `ACPClient` provides the simplest way to interact with ACP agents:
+
+#### Direct Usage
+
+```python
+from chuk_acp import ACPClient
+
+async with ACPClient("python", ["agent.py"]) as client:
+    # Access agent information
+    print(f"Agent: {client.agent_info.name}")
+    print(f"Session: {client.current_session.sessionId}")
+
+    # Send prompts
+    result = await client.send_prompt("Hello!")
+    print(result.full_message)  # Complete agent response
+    print(result.stop_reason)   # Why agent stopped
+
+    # Create new sessions
+    new_session = await client.new_session(cwd="/other/path")
+```
+
+#### Configuration-Based Usage
+
+Use standard ACP configuration format (compatible with Zed, VSCode, etc.):
+
+```python
+from chuk_acp import ACPClient, AgentConfig, load_agent_config
+
+# Method 1: Create config directly
+config = AgentConfig(
+    command="kimi",
+    args=["--acp"],
+    env={"DEBUG": "true"},
+    cwd="/optional/path"
+)
+
+async with ACPClient.from_config(config) as client:
+    result = await client.send_prompt("Hello!")
+
+# Method 2: Load from JSON file
+config = load_agent_config("~/.config/my-app/agent.json")
+async with ACPClient.from_config(config) as client:
+    result = await client.send_prompt("Hello!")
+
+# Method 3: From dictionary (like editor configs)
+config = AgentConfig(**{
+    "command": "kimi",
+    "args": ["--acp"],
+    "env": {}
+})
+async with ACPClient.from_config(config) as client:
+    result = await client.send_prompt("Hello!")
+```
+
+**Example JSON config file:**
+```json
+{
+  "command": "kimi",
+  "args": ["--acp"],
+  "env": {
+    "DEBUG": "true",
+    "LOG_LEVEL": "info"
+  },
+  "cwd": "/optional/path"
+}
+```
+
+**Key Classes:**
+- `ACPClient` - Main client class
+- `AgentConfig` - Standard ACP configuration format
+- `load_agent_config()` - Load config from JSON file
+- `PromptResult` - Contains response and all notifications
+- `SessionInfo` - Session information
+- `SessionUpdate` - Individual notification from agent
+
+### Low-Level Protocol API
+
+For fine-grained control over the protocol:
 
 ### Protocol Helpers
 

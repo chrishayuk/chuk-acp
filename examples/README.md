@@ -1,175 +1,287 @@
-# Chuk-ACP Examples
+# chuk-acp Examples
 
-This directory contains example scripts demonstrating how to use the chuk-acp library.
+This directory contains examples demonstrating how to use chuk-acp to build ACP agents and clients.
 
-## Available Examples
+## 🚀 Quick Start Examples (Recommended)
 
-### 1. Quick Start (`quick_start.py`)
+These examples use the high-level `ACPClient` API - the easiest way to work with ACP agents.
 
-A minimal example showing the basics of connecting to an ACP agent and performing simple operations.
+### 1. simple_client.py - Basic Client Usage
 
-**What it demonstrates:**
-- Creating a simple echo agent
-- Establishing stdio transport
-- Protocol handshake (initialize)
-- Sending a prompt and receiving a response
+The simplest example showing how to connect to an agent and send a prompt:
 
-**Run it:**
-```bash
-uv run python examples/quick_start.py
-```
-
-### 2. Simple Client (`simple_client.py`)
-
-A straightforward client example showing basic ACP communication.
-
-**What it demonstrates:**
-- Connecting to the echo agent
-- Protocol handshake
-- Session creation
-- Sending a single prompt
-
-**Run it:**
 ```bash
 uv run python examples/simple_client.py
 ```
 
-### 3. Comprehensive Demo (`comprehensive_demo.py`)
-
-A complete walkthrough of all major ACP protocol features with detailed output.
-
 **What it demonstrates:**
-- Stdio transport connection
-- ACP protocol handshake (initialize)
-- Session creation and management
-- Agent prompt/response
-- Filesystem read/write operations via agent
-- Terminal session creation
-- Proper cleanup and error handling
+- Creating an `ACPClient` instance
+- Automatic protocol initialization
+- Sending prompts and receiving responses
+- Accessing agent info and session details
 
-**Run it:**
-```bash
-uv run python examples/comprehensive_demo.py
+**Code highlights:**
+```python
+from chuk_acp import ACPClient
+
+async with ACPClient("python", ["echo_agent.py"]) as client:
+    result = await client.send_prompt("Hello!")
+    print(f"Agent: {result.full_message}")
 ```
 
-### 4. Echo Agent (`echo_agent.py`)
+### 2. quick_start.py - Multiple Interactions
 
-A simple standalone ACP agent server that echoes back messages. This demonstrates how to build an agent using the chuk-acp library.
+Shows how to have a multi-turn conversation with an agent:
+
+```bash
+uv run python examples/quick_start.py
+```
 
 **What it demonstrates:**
-- Building a basic ACP-compliant agent using library helpers
-- Using `create_response()` and `create_error_response()` for JSON-RPC
-- Using `create_notification()` for session updates
-- Using method constants (`METHOD_INITIALIZE`, etc.)
-- Handling initialize requests
-- Processing prompts and sessions
-- JSON-RPC message handling via stdin/stdout
+- Multiple prompts in a single session
+- Accessing individual responses
+- Full conversation flow
 
-**Important:** The echo agent is designed to run as a **server process** that communicates via stdin/stdout. Running it directly won't show any output - it waits for JSON-RPC messages on stdin.
+### 3. config_example.py - Configuration Support
 
-**How to use it:**
+Shows how to use `AgentConfig` for standard ACP configuration:
 
-1. **With simple_client.py (Recommended):**
+```bash
+uv run python examples/config_example.py
+```
+
+**What it demonstrates:**
+- Standard ACP configuration format (matches Zed, VSCode, etc.)
+- Loading config from dictionaries
+- Environment variable support
+- Compatible with editor configuration files
+
+**Config format:**
+```json
+{
+  "command": "python",
+  "args": ["agent.py"],
+  "env": {
+    "DEBUG": "true"
+  }
+}
+```
+
+### 4. echo_agent.py - Building an Agent
+
+A complete ACP agent implementation that echoes back user messages:
+
+```bash
+# Run directly to see agent behavior
+uv run python examples/echo_agent.py
+# (Note: Agents are stdin/stdout servers, so running alone won't show much)
+
+# Use with a client
+uv run python examples/simple_client.py
+```
+
+**What it demonstrates:**
+- Agent server structure (stdin/stdout communication)
+- Handling ACP protocol methods
+- Using library helpers for responses
+- Sending notifications
+
+**Key Methods Implemented:**
+- `initialize` - Protocol handshake
+- `session/new` - Session creation
+- `session/prompt` - Handling user prompts
+
+## 📚 Advanced Examples (Low-Level API)
+
+For users who need fine-grained control over the protocol, see the `low_level/` directory.
+
+### low_level/simple_client.py
+
+Shows manual protocol handling without `ACPClient`:
+- Direct use of `stdio_transport`
+- Manual notification capture
+- Request/response handling
+
+```bash
+uv run python examples/low_level/simple_client.py
+```
+
+### low_level/quick_start.py
+
+Self-contained example with embedded agent:
+- Agent and client in a single file
+- Full protocol implementation
+- Good for learning the protocol details
+
+```bash
+uv run python examples/low_level/quick_start.py
+```
+
+### low_level/comprehensive_demo.py
+
+Complete demonstration of all ACP features:
+- File system operations
+- Terminal operations
+- Session management
+- All protocol capabilities
+
+```bash
+uv run python examples/low_level/comprehensive_demo.py
+```
+
+## 🎯 Which Example Should I Use?
+
+| If you want to...                          | Use this example           |
+|--------------------------------------------|----------------------------|
+| **Get started quickly**                    | `simple_client.py`         |
+| **See a complete conversation**            | `quick_start.py`           |
+| **Use standard ACP config format**         | `config_example.py`        |
+| **Build your own agent**                   | `echo_agent.py`            |
+| **Understand the protocol details**        | `low_level/quick_start.py` |
+| **See all ACP features**                   | `low_level/comprehensive_demo.py` |
+| **Fine-grained protocol control**          | `low_level/simple_client.py` |
+
+## 💡 Design Patterns
+
+### High-Level Client Pattern (Recommended)
+
+**Option A: Direct Usage**
+```python
+from chuk_acp import ACPClient
+
+async with ACPClient("python", ["agent.py"]) as client:
+    # Everything is handled automatically!
+    result = await client.send_prompt("Hello!")
+    print(result.full_message)
+```
+
+**Option B: Using Configuration (Matches Editor Configs)**
+```python
+from chuk_acp import ACPClient, AgentConfig
+
+config = AgentConfig(
+    command="kimi",
+    args=["--acp"],
+    env={"DEBUG": "true"}
+)
+
+async with ACPClient.from_config(config) as client:
+    result = await client.send_prompt("Hello!")
+    print(result.full_message)
+```
+
+**Benefits:**
+- ✅ Automatic initialization
+- ✅ Session management handled
+- ✅ Notifications captured automatically
+- ✅ Resource cleanup guaranteed
+- ✅ Simple, readable code
+- ✅ Standard config format (compatible with Zed, VSCode, etc.)
+
+### Low-Level Pattern (Advanced)
+
+```python
+from chuk_acp import stdio_transport, send_initialize, send_session_new
+from chuk_acp.protocol import create_request, METHOD_SESSION_PROMPT
+
+async with stdio_transport("python", ["agent.py"]) as (read, write):
+    init = await send_initialize(read, write, ...)
+    session = await send_session_new(read, write, ...)
+
+    # Manual request/response handling
+    request = create_request(method=METHOD_SESSION_PROMPT, ...)
+    await write.send(request)
+
+    # Manual notification capture
+    while True:
+        message = await read.receive()
+        # ... handle notifications and responses
+```
+
+**Benefits:**
+- ✅ Full control over protocol flow
+- ✅ Can implement custom behavior
+- ✅ Good for debugging
+- ✅ Educational for learning ACP
+
+## 🔧 Running the Examples
+
+### Prerequisites
+
+```bash
+# Install chuk-acp with pydantic support
+uv pip install -e ".[pydantic]"
+```
+
+### Running Individual Examples
+
+```bash
+# High-level examples (start here!)
+uv run python examples/simple_client.py       # Basic usage
+uv run python examples/quick_start.py         # Multi-turn conversation
+uv run python examples/config_example.py      # Configuration support
+
+# Low-level examples (advanced)
+uv run python examples/low_level/simple_client.py        # Manual protocol
+uv run python examples/low_level/quick_start.py          # Self-contained
+uv run python examples/low_level/comprehensive_demo.py   # All features
+```
+
+## 📝 Notes
+
+### About echo_agent.py
+
+The `echo_agent.py` is an ACP **agent server** that communicates via stdin/stdout. When run directly, it waits for JSON-RPC messages on stdin:
+
+```bash
+# Running alone won't show much output
+python examples/echo_agent.py
+# (It's waiting for protocol messages on stdin)
+
+# Use with a client instead
+python examples/simple_client.py
+```
+
+**Three ways to use the agent:**
+
+1. **With a client (recommended):**
    ```bash
    uv run python examples/simple_client.py
    ```
-   The simple_client will automatically launch echo_agent.py as a subprocess.
 
 2. **Manual testing with piped input:**
    ```bash
-   # From project root directory:
-   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' | uv run python examples/echo_agent.py
-
-   # You should see a JSON response:
-   # {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentInfo":{...}}}
+   echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":"1"}' | python examples/echo_agent.py
    ```
 
-3. **As a subprocess in your own code:**
+3. **As a subprocess in your code:**
    ```python
-   from chuk_acp import stdio_transport
-
-   async with stdio_transport("python", ["examples/echo_agent.py"]) as (read, write):
-       # Send messages to the agent
-       pass
+   async with ACPClient("python", ["echo_agent.py"]) as client:
+       # Client handles all communication
    ```
 
-The agent logs debug information to `/tmp/echo_agent.log` for troubleshooting.
+### Debug Logging
 
-## Requirements
+The echo agent logs to `~/.local/share/chuk-acp/echo-agent.log` by default. Check this file for debugging:
 
-All examples require:
-- Python 3.11+
-- chuk-acp installed with `uv pip install -e .` from project root
-- Or install from PyPI: `uv pip install chuk-acp[pydantic]`
-
-## Learning Path
-
-If you're new to ACP, we recommend following this order:
-
-1. **Start with `quick_start.py`** - Get familiar with basic concepts
-2. **Try `simple_client.py`** - See a minimal client implementation
-3. **Review `echo_agent.py`** - Understand how agents work
-4. **Explore `comprehensive_demo.py`** - See all features in action
-
-## Common Patterns
-
-### Creating a Transport
-
-```python
-from chuk_acp.transport.stdio import stdio_transport
-
-async with stdio_transport(
-    command="python",
-    args=["agent_server.py"]
-) as (read_stream, write_stream):
-    # Use read_stream and write_stream for communication
-    pass
+```bash
+tail -f ~/.local/share/chuk-acp/echo-agent.log
 ```
 
-### Protocol Handshake
+## 🎓 Learning Path
 
-```python
-from chuk_acp.protocol.messages.initialize import send_initialize
-from chuk_acp.protocol.types import ClientInfo, ClientCapabilities
+1. **Start with `simple_client.py`** - Understand the basics
+2. **Read `echo_agent.py`** - See how agents work
+3. **Try `quick_start.py`** - Multi-turn conversations
+4. **Explore `low_level/quick_start.py`** - Understand protocol details
+5. **Study `low_level/comprehensive_demo.py`** - See all features
 
-result = await send_initialize(
-    read_stream,
-    write_stream,
-    protocol_version=1,
-    client_info=ClientInfo(name="my-client", version="1.0.0"),
-    capabilities=ClientCapabilities()
-)
-```
+## 📖 Additional Resources
 
-### Sending a Prompt
+- [Main README](../README.md) - Complete documentation
+- [ACP Specification](https://agentclientprotocol.com) - Protocol details
+- [API Reference](../README.md#api-reference) - Full API documentation
 
-```python
-from chuk_acp.protocol.messages.session import send_session_prompt
-from chuk_acp.protocol.types import TextContent
+## 🤝 Contributing
 
-result = await send_session_prompt(
-    read_stream,
-    write_stream,
-    session_id="session-id",
-    prompt=[TextContent(text="Your prompt here")]
-)
-```
-
-## Documentation
-
-For complete API documentation, see the main project README and the ACP specification at https://agentclientprotocol.com
-
-## Support
-
-If you encounter issues with any examples:
-1. Ensure you're using Python 3.11+
-2. Verify chuk-acp is installed: `uv pip list | grep chuk-acp`
-3. Check the main project's issue tracker
-
-## Contributing
-
-Feel free to contribute additional examples! Ideal examples:
-- Focus on a specific use case
-- Include clear documentation
-- Handle errors gracefully
-- Clean up resources properly
+Found a bug or have an idea for a better example? Please [open an issue](https://github.com/chuk-ai/chuk-acp/issues) or submit a pull request!

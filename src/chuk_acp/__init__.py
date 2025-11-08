@@ -79,6 +79,16 @@ from .transport import (
     stdio_transport,
 )
 
+# High-level client
+from .client import (
+    ACPClient,
+    PromptResult,
+    SessionUpdate,
+    SessionInfo,
+    AgentConfig,
+    load_agent_config,
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -146,4 +156,11 @@ __all__ = [
     "StdioTransport",
     "StdioParameters",
     "stdio_transport",
+    # Client
+    "ACPClient",
+    "PromptResult",
+    "SessionUpdate",
+    "SessionInfo",
+    "AgentConfig",
+    "load_agent_config",
 ]

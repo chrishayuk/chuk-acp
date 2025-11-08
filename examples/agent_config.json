@@ -1,0 +1,8 @@
+{
+  "command": "python",
+  "args": ["echo_agent.py"],
+  "env": {
+    "DEBUG": "false",
+    "LOG_LEVEL": "info"
+  }
+}
