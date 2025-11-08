@@ -149,7 +149,7 @@ async def main():
 
             # Step 4: Create a session
             print("4. Creating session...")
-            session = await send_session_new(read, write, cwd="/tmp")
+            session = await send_session_new(read, write, cwd=tempfile.gettempdir())
             print(f"   Session ID: {session.sessionId}")
 
             # Step 5: Send a prompt and capture the agent's response

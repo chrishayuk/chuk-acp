@@ -10,6 +10,7 @@ It demonstrates how to:
 
 import asyncio
 import logging
+import tempfile
 import uuid
 
 import anyio
@@ -70,7 +71,7 @@ async def main():
         session = await send_session_new(
             read,
             write,
-            cwd="/tmp",  # Must be absolute path
+            cwd=tempfile.gettempdir(),  # Must be absolute path
         )
 
         print(f"   Session ID: {session.sessionId}")

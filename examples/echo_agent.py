@@ -4,6 +4,8 @@ This agent echoes back user prompts, demonstrating how easy it is
 to build an ACP agent using the high-level ACPAgent API.
 """
 
+import os
+import tempfile
 from typing import List
 from chuk_acp.agent import ACPAgent, AgentSession
 from chuk_acp.protocol.types import AgentInfo, Content
@@ -30,5 +32,7 @@ class EchoAgent(ACPAgent):
 
 
 if __name__ == "__main__":
-    agent = EchoAgent(log_file="/tmp/echo_agent.log")
+    # Use platform-independent temporary directory
+    log_path = os.path.join(tempfile.gettempdir(), "echo_agent.log")
+    agent = EchoAgent(log_file=log_path)
     agent.run()
