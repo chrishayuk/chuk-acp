@@ -2,6 +2,32 @@
 
 This directory contains examples demonstrating how to use chuk-acp to build ACP agents and clients.
 
+## 🎯 Editor Integration (Use in Zed/VSCode!)
+
+The easiest way to use chuk-acp agents is directly in your editor! No installation required with `uvx`:
+
+### Zed Editor Configuration
+
+Add to your Zed `settings.json`:
+
+```json
+{
+  "agent_servers": {
+    "Code Helper": {
+      "command": "uvx",
+      "args": ["--from", "chuk-acp", "chuk-acp", "python", "examples/code_helper_agent.py"],
+      "env": {}
+    }
+  }
+}
+```
+
+See [zed_config.json](./zed_config.json) for the complete configuration.
+
+**Available demo agents:**
+- **Echo Agent** (`echo_agent.py`) - Simple echo bot for testing
+- **Code Helper** (`code_helper_agent.py`) - Coding assistant with examples and tips
+
 ## 🎯 CLI Tool (Fastest Start!)
 
 The quickest way to interact with agents is using the `chuk-acp` CLI:

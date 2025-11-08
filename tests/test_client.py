@@ -69,8 +69,11 @@ class TestACPClientBasic:
     @pytest.mark.asyncio
     async def test_with_cwd(self, python_exe, echo_agent_path):
         """Test with custom working directory."""
-        async with ACPClient(python_exe, [echo_agent_path], cwd="/tmp") as client:
-            assert client.default_cwd == "/tmp"
+        import tempfile
+
+        test_cwd = tempfile.gettempdir()
+        async with ACPClient(python_exe, [echo_agent_path], cwd=test_cwd) as client:
+            assert client.default_cwd == test_cwd
 
     @pytest.mark.asyncio
     async def test_with_env(self, python_exe, echo_agent_path):
@@ -104,9 +107,12 @@ class TestACPClientConfig:
     @pytest.mark.asyncio
     async def test_from_config_with_cwd(self, python_exe, echo_agent_path):
         """Test config with working directory."""
-        config = AgentConfig(command=python_exe, args=[echo_agent_path], cwd="/tmp")
+        import tempfile
+
+        test_cwd = tempfile.gettempdir()
+        config = AgentConfig(command=python_exe, args=[echo_agent_path], cwd=test_cwd)
         async with ACPClient.from_config(config) as client:
-            assert client.default_cwd == "/tmp"
+            assert client.default_cwd == test_cwd
 
     @pytest.mark.asyncio
     async def test_from_config_file(self, python_exe, echo_agent_path):

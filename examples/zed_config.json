@@ -1,0 +1,26 @@
+{
+  "agent_servers": {
+    "Echo Agent (Demo)": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "chuk-acp",
+        "chuk-acp",
+        "python",
+        "examples/echo_agent.py"
+      ],
+      "env": {}
+    },
+    "Code Helper (Demo)": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "chuk-acp",
+        "chuk-acp",
+        "python",
+        "examples/code_helper_agent.py"
+      ],
+      "env": {}
+    }
+  }
+}

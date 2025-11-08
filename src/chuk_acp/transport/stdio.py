@@ -88,13 +88,21 @@ class StdioTransport(Transport):
         self._read_stream = read_recv
         self._write_stream = write_send
 
+        # Prepare environment - merge with current env to preserve system variables
+        env = None
+        if params.env is not None:
+            import os
+
+            env = os.environ.copy()
+            env.update(params.env)
+
         # Start process
         self.process = await anyio.open_process(
             [params.command] + params.args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=params.env,
+            env=env,
             cwd=params.cwd,
         )
 
