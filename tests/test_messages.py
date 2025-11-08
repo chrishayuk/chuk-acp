@@ -230,6 +230,105 @@ class TestSessionMessages:
             )
             assert result.granted is True
 
+    async def test_send_session_new_with_optional_params(self):
+        """Test send_session_new with optional mcp_servers and mode."""
+        send_stream, send_recv = anyio.create_memory_object_stream(10)
+        recv_send, recv_stream = anyio.create_memory_object_stream(10)
+
+        async def responder():
+            req = await send_recv.receive()
+            assert req.method == "session/new"
+            assert req.params["cwd"] == "/tmp"
+            assert "mcpServers" in req.params
+            assert "mode" in req.params
+            assert req.params["mode"] == "code"
+
+            resp = create_response(id=req.id, result={"sessionId": "session-123"})
+            await recv_send.send(resp)
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(responder)
+
+            from chuk_acp.protocol.types import StdioMCPServer
+
+            mcp_server = StdioMCPServer(name="test-server", command="test", args=["--test"])
+
+            result = await send_session_new(
+                recv_stream, send_stream, cwd="/tmp", mcp_servers=[mcp_server], mode="code"
+            )
+            assert result.sessionId == "session-123"
+
+    async def test_send_session_load_with_mcp_servers(self):
+        """Test send_session_load with optional mcp_servers."""
+        send_stream, send_recv = anyio.create_memory_object_stream(10)
+        recv_send, recv_stream = anyio.create_memory_object_stream(10)
+
+        async def responder():
+            req = await send_recv.receive()
+            assert req.method == "session/load"
+            assert req.params["sessionId"] == "session-123"
+            assert "mcpServers" in req.params
+
+            resp = create_response(id=req.id, result={"sessionId": "session-123"})
+            await recv_send.send(resp)
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(responder)
+
+            from chuk_acp.protocol.types import StdioMCPServer
+
+            mcp_server = StdioMCPServer(name="test-server", command="test", args=["--test"])
+
+            result = await send_session_load(
+                recv_stream,
+                send_stream,
+                session_id="session-123",
+                cwd="/tmp",
+                mcp_servers=[mcp_server],
+            )
+            assert result["sessionId"] == "session-123"
+
+    async def test_send_session_update_with_all_optional_params(self):
+        """Test send_session_update with all optional parameters."""
+        send_stream, recv_stream = anyio.create_memory_object_stream(10)
+
+        from chuk_acp.protocol.types import (
+            Plan,
+            ToolCall,
+            ToolCallUpdate,
+            AvailableCommand,
+        )
+
+        plan = Plan(tasks=["task1", "task2"], currentTask="task1")
+        agent_msg = TextContent(text="Processing...")
+        user_msg = TextContent(text="User input")
+        tool_call = ToolCall(id="tool-1", name="test_tool", arguments={})
+        tool_update = ToolCallUpdate(id="tool-1", output="result")
+        commands = [AvailableCommand(name="test", description="Test command")]
+
+        await send_session_update(
+            send_stream,
+            session_id="session-123",
+            plan=plan,
+            agent_message_chunk=agent_msg,
+            user_message_chunk=user_msg,
+            thought="thinking...",
+            tool_call=tool_call,
+            tool_call_update=tool_update,
+            available_commands_update=commands,
+        )
+
+        notif = await recv_stream.receive()
+        assert notif.method == "session/update"
+        assert notif.params["sessionId"] == "session-123"
+        assert "plan" in notif.params
+        assert "agentMessageChunk" in notif.params
+        assert "userMessageChunk" in notif.params
+        assert "thought" in notif.params
+        assert "toolCall" in notif.params
+        assert "toolCallUpdate" in notif.params
+        assert "availableCommandsUpdate" in notif.params
+
 
 class TestFilesystemMessages:
     """Test filesystem message functions."""

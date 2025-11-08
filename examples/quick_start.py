@@ -94,14 +94,14 @@ async def main():
         # Step 2: Connect via stdio transport
         print("2. Connecting to agent...")
         async with stdio_transport(sys.executable, [agent_path]) as (read, write):
-
             # Step 3: Initialize the connection
             print("3. Initializing protocol...")
             init_result = await send_initialize(
-                read, write,
+                read,
+                write,
                 protocol_version=1,
                 client_info=ClientInfo(name="quick-start", version="1.0.0"),
-                capabilities=ClientCapabilities()
+                capabilities=ClientCapabilities(),
             )
             print(f"   Connected to: {init_result.agentInfo.name}")
 
@@ -113,22 +113,16 @@ async def main():
             # Step 5: Send a prompt
             print("5. Sending prompt...")
             result = await send_session_prompt(
-                read, write,
+                read,
+                write,
                 session_id=session.sessionId,
-                prompt=[TextContent(text="Hello, Agent!")]
+                prompt=[TextContent(text="Hello, Agent!")],
             )
 
             # Step 6: Display the response
             print("\n✓ Success!")
             print(f"   Stop Reason: {result.stopReason}")
-            if hasattr(result, 'agentMessage') and result.agentMessage:
-                for msg in result.agentMessage:
-                    if hasattr(msg, 'text'):
-                        print(f"   Agent says: {msg.text}")
-                    elif isinstance(msg, dict) and 'text' in msg:
-                        print(f"   Agent says: {msg['text']}")
-            else:
-                print(f"   (No agent message in response)")
+            print("   Response: Agent completed processing the prompt")
 
     finally:
         # Cleanup

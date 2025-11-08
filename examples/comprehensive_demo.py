@@ -12,7 +12,6 @@ Usage:
     python examples/comprehensive_demo.py
 """
 
-import asyncio
 import sys
 import tempfile
 from pathlib import Path
@@ -23,8 +22,6 @@ import anyio
 from chuk_acp.protocol.types import (
     ClientInfo,
     ClientCapabilities,
-    AgentInfo,
-    AgentCapabilities,
     TextContent,
 )
 from chuk_acp.protocol.messages.initialize import send_initialize
@@ -200,9 +197,9 @@ if __name__ == "__main__":
 
 def print_section(title: str) -> None:
     """Print a formatted section header."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  {title}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
 async def run_demo() -> None:
@@ -215,14 +212,12 @@ async def run_demo() -> None:
     # Step 1: Create temporary agent server file
     print_section("Step 1: Creating Agent Server")
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False
-    ) as agent_file:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as agent_file:
         agent_file.write(AGENT_SERVER_CODE)
         agent_path = agent_file.name
 
     print(f"✓ Created temporary agent server at: {agent_path}")
-    print(f"  Agent capabilities: filesystem, terminal support")
+    print("  Agent capabilities: filesystem, terminal support")
 
     try:
         # Step 2: Connect to agent via stdio transport
@@ -231,27 +226,21 @@ async def run_demo() -> None:
         print(f"Launching agent: python {agent_path}")
         print("Establishing stdio transport...")
 
-        async with stdio_transport(
-            command=sys.executable,
-            args=[agent_path]
-        ) as (read_stream, write_stream):
-
+        async with stdio_transport(command=sys.executable, args=[agent_path]) as (
+            read_stream,
+            write_stream,
+        ):
             print("✓ Transport established")
             print("✓ Bidirectional communication ready\n")
 
             # Step 3: Protocol handshake (Initialize)
             print_section("Step 3: Protocol Handshake (Initialize)")
 
-            client_info = ClientInfo(
-                name="demo-client",
-                version="1.0.0"
-            )
+            client_info = ClientInfo(name="demo-client", version="1.0.0")
 
-            client_capabilities = ClientCapabilities(
-                supportsInteractiveSessionMode=True
-            )
+            client_capabilities = ClientCapabilities(supportsInteractiveSessionMode=True)
 
-            print(f"Sending initialize request...")
+            print("Sending initialize request...")
             print(f"  Client: {client_info.name} v{client_info.version}")
 
             init_result = await send_initialize(
@@ -259,34 +248,35 @@ async def run_demo() -> None:
                 write_stream,
                 protocol_version=1,
                 client_info=client_info,
-                capabilities=client_capabilities
+                capabilities=client_capabilities,
             )
 
-            print(f"\n✓ Handshake successful!")
+            print("\n✓ Handshake successful!")
             print(f"  Protocol Version: {init_result.protocolVersion}")
             print(f"  Agent: {init_result.agentInfo.name} v{init_result.agentInfo.version}")
-            print(f"  Agent Capabilities:")
+            print("  Agent Capabilities:")
 
-            if hasattr(init_result, 'capabilities') and init_result.capabilities:
-                caps = init_result.capabilities.model_dump() if hasattr(init_result.capabilities, 'model_dump') else vars(init_result.capabilities)
+            if hasattr(init_result, "capabilities") and init_result.capabilities:
+                caps = (
+                    init_result.capabilities.model_dump()
+                    if hasattr(init_result.capabilities, "model_dump")
+                    else vars(init_result.capabilities)
+                )
                 for cap, value in caps.items():
                     if value:
                         print(f"    • {cap}: {value}")
             else:
-                print(f"    (No capabilities reported)")
+                print("    (No capabilities reported)")
 
             # Step 4: Create a session
             print_section("Step 4: Creating Session")
 
             import os
+
             cwd = os.getcwd()
             print(f"Creating new session in: {cwd}")
 
-            session_result = await send_session_new(
-                read_stream,
-                write_stream,
-                cwd=cwd
-            )
+            session_result = await send_session_new(read_stream, write_stream, cwd=cwd)
 
             session_id = session_result.sessionId
             print(f"✓ Session created: {session_id}")
@@ -301,24 +291,18 @@ async def run_demo() -> None:
                 read_stream,
                 write_stream,
                 session_id=session_id,
-                prompt=[TextContent(text=prompt_text)]
+                prompt=[TextContent(text=prompt_text)],
             )
 
-            print(f"\n✓ Agent response received:")
+            print("\n✓ Agent response received:")
             print(f"  Stop Reason: {prompt_result.stopReason}")
-
-            if hasattr(prompt_result, 'agentMessage') and prompt_result.agentMessage:
-                for msg in prompt_result.agentMessage:
-                    if hasattr(msg, 'text'):
-                        print(f"  Message: {msg.text}")
+            print("  The agent has completed processing the prompt")
 
             # Step 6: Filesystem operations
             print_section("Step 6: Filesystem Operations")
 
             # Create a temporary file
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as tmp_file:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp_file:
                 test_content = "Hello from ACP client!\nThis is a test file."
                 tmp_file.write(test_content)
                 tmp_path = tmp_file.name
@@ -327,34 +311,27 @@ async def run_demo() -> None:
             print(f"Original content:\n  {test_content.replace(chr(10), chr(10) + '  ')}")
 
             # Read file via ACP
-            print(f"\nReading file via ACP agent...")
-            file_contents = await send_fs_read_text_file(
-                read_stream,
-                write_stream,
-                path=tmp_path
-            )
+            print("\nReading file via ACP agent...")
+            file_contents = await send_fs_read_text_file(read_stream, write_stream, path=tmp_path)
 
-            print(f"✓ File read successful:")
+            print("✓ File read successful:")
             print(f"  Content: {file_contents[:50]}...")
 
             # Write new content via ACP
             new_content = "Updated by ACP agent!\nModified content here."
-            print(f"\nWriting new content via ACP agent...")
+            print("\nWriting new content via ACP agent...")
 
             await send_fs_write_text_file(
-                read_stream,
-                write_stream,
-                path=tmp_path,
-                contents=new_content
+                read_stream, write_stream, path=tmp_path, contents=new_content
             )
 
-            print(f"✓ File write successful")
+            print("✓ File write successful")
 
             # Verify the write
             with open(tmp_path, "r") as f:
                 verified_content = f.read()
 
-            print(f"✓ Verified new content:")
+            print("✓ Verified new content:")
             print(f"  {verified_content.replace(chr(10), chr(10) + '  ')}")
 
             # Cleanup temp file
@@ -365,10 +342,7 @@ async def run_demo() -> None:
 
             print("Creating terminal session...")
             terminal_info = await send_terminal_create(
-                read_stream,
-                write_stream,
-                command="echo",
-                args=["Hello from terminal!"]
+                read_stream, write_stream, command="echo", args=["Hello from terminal!"]
             )
 
             print(f"✓ Terminal created: {terminal_info.id}")
@@ -389,7 +363,7 @@ async def run_demo() -> None:
         # Cleanup
         print_section("Cleanup")
         Path(agent_path).unlink()
-        print(f"✓ Removed temporary agent server")
+        print("✓ Removed temporary agent server")
 
 
 def main() -> None:
@@ -402,6 +376,7 @@ def main() -> None:
     except Exception as e:
         print(f"\n\nError running demo: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

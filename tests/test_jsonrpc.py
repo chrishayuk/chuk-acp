@@ -480,3 +480,175 @@ class TestPydanticValidation:
             from chuk_acp.protocol.acp_pydantic_base import ConfigDict
 
             assert ConfigDict is not None
+
+
+class TestErrorValidation:
+    """Test JSONRPCError validation (Pydantic model_post_init)."""
+
+    def test_error_validation_missing_code(self):
+        """Test that error without code field is rejected."""
+        from chuk_acp.protocol.jsonrpc import JSONRPCError, PYDANTIC_AVAILABLE
+
+        if not PYDANTIC_AVAILABLE:
+            # Skip if Pydantic not available
+            return
+
+        import pytest
+
+        with pytest.raises(ValueError, match="integer 'code' field"):
+            JSONRPCError(
+                jsonrpc="2.0",
+                id="123",
+                error={"message": "Error without code"},  # Missing code
+            )
+
+    def test_error_validation_non_integer_code(self):
+        """Test that error with non-integer code is rejected."""
+        from chuk_acp.protocol.jsonrpc import JSONRPCError, PYDANTIC_AVAILABLE
+
+        if not PYDANTIC_AVAILABLE:
+            return
+
+        import pytest
+
+        with pytest.raises(ValueError, match="integer 'code' field"):
+            JSONRPCError(jsonrpc="2.0", id="123", error={"code": "not-an-int", "message": "Error"})
+
+    def test_error_validation_missing_message(self):
+        """Test that error without message field is rejected."""
+        from chuk_acp.protocol.jsonrpc import JSONRPCError, PYDANTIC_AVAILABLE
+
+        if not PYDANTIC_AVAILABLE:
+            return
+
+        import pytest
+
+        with pytest.raises(ValueError, match="string 'message' field"):
+            JSONRPCError(
+                jsonrpc="2.0",
+                id="123",
+                error={"code": -32600},  # Missing message
+            )
+
+    def test_error_validation_non_string_message(self):
+        """Test that error with non-string message is rejected."""
+        from chuk_acp.protocol.jsonrpc import JSONRPCError, PYDANTIC_AVAILABLE
+
+        if not PYDANTIC_AVAILABLE:
+            return
+
+        import pytest
+
+        with pytest.raises(ValueError, match="string 'message' field"):
+            JSONRPCError(
+                jsonrpc="2.0",
+                id="123",
+                error={"code": -32600, "message": 123},  # Non-string message
+            )
+
+
+class TestBatchMessages:
+    """Test batch message parsing."""
+
+    def test_parse_batch_requests(self):
+        """Test parsing a batch of requests."""
+        from chuk_acp.protocol.jsonrpc import parse_message, JSONRPCRequest
+
+        data = [
+            {"jsonrpc": "2.0", "id": "1", "method": "method1"},
+            {"jsonrpc": "2.0", "id": "2", "method": "method2"},
+        ]
+
+        messages = parse_message(data)
+        assert isinstance(messages, list)
+        assert len(messages) == 2
+        assert all(isinstance(msg, JSONRPCRequest) for msg in messages)
+        assert messages[0].id == "1"
+        assert messages[1].id == "2"
+
+    def test_parse_batch_mixed(self):
+        """Test parsing a batch with mixed message types."""
+        from chuk_acp.protocol.jsonrpc import (
+            parse_message,
+            JSONRPCRequest,
+            JSONRPCNotification,
+        )
+
+        data = [
+            {"jsonrpc": "2.0", "id": "1", "method": "request"},
+            {"jsonrpc": "2.0", "method": "notification"},
+        ]
+
+        messages = parse_message(data)
+        assert len(messages) == 2
+        assert isinstance(messages[0], JSONRPCRequest)
+        assert isinstance(messages[1], JSONRPCNotification)
+
+    def test_parse_empty_batch(self):
+        """Test parsing an empty batch."""
+        from chuk_acp.protocol.jsonrpc import parse_message
+
+        data = []
+        messages = parse_message(data)
+        assert isinstance(messages, list)
+        assert len(messages) == 0
+
+
+class TestParseMessageErrors:
+    """Test parse_message error handling."""
+
+    def test_parse_non_dict_non_list(self):
+        """Test parsing non-dict, non-list raises error."""
+        from chuk_acp.protocol.jsonrpc import parse_message, InvalidRequest
+
+        import pytest
+
+        with pytest.raises(InvalidRequest):
+            parse_message("not a dict or list")
+
+        with pytest.raises(InvalidRequest):
+            parse_message(123)
+
+        with pytest.raises(InvalidRequest):
+            parse_message(None)
+
+    def test_parse_missing_jsonrpc_version(self):
+        """Test parsing message without jsonrpc field."""
+        from chuk_acp.protocol.jsonrpc import parse_message, InvalidRequest
+
+        import pytest
+
+        with pytest.raises(InvalidRequest):
+            parse_message({"id": "1", "method": "test"})  # No jsonrpc field
+
+    def test_parse_invalid_jsonrpc_version(self):
+        """Test parsing message with wrong jsonrpc version."""
+        from chuk_acp.protocol.jsonrpc import parse_message, InvalidRequest
+
+        import pytest
+
+        with pytest.raises(InvalidRequest):
+            parse_message(
+                {"jsonrpc": "1.0", "id": "1", "method": "test"}  # Wrong version
+            )
+
+    def test_parse_invalid_message_structure(self):
+        """Test parsing message with invalid field combination."""
+        from chuk_acp.protocol.jsonrpc import parse_message, InvalidRequest
+
+        import pytest
+
+        # Message with both result and error
+        with pytest.raises(InvalidRequest):
+            parse_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": "1",
+                    "result": {},
+                    "error": {"code": -32600, "message": "Error"},
+                }
+            )
+
+        # Message with neither method nor result/error
+        with pytest.raises(InvalidRequest):
+            parse_message({"jsonrpc": "2.0", "id": "1"})  # No method, result, or error

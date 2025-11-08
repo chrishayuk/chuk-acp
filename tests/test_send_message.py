@@ -330,3 +330,82 @@ class TestMessageIntegration:
 
             assert result == {"ok": True}
             assert notifications_received == ["notify1", "notify2"]
+
+
+class TestSendMessageErrorHandling:
+    """Test error handling in send_message and send_notification."""
+
+    @pytest.mark.asyncio
+    async def test_send_message_send_failure(self):
+        """Test send_message when write_stream.send() fails."""
+        from chuk_acp.protocol.messages.send_message import send_message
+
+        send_stream, _ = anyio.create_memory_object_stream(1)
+        recv_stream, _ = anyio.create_memory_object_stream(1)
+
+        # Close the send stream to cause send failure
+        await send_stream.aclose()
+
+        with pytest.raises(anyio.ClosedResourceError):
+            await send_message(recv_stream, send_stream, method="test_method", timeout=1.0)
+
+    @pytest.mark.asyncio
+    async def test_send_notification_send_failure(self):
+        """Test send_notification when write_stream.send() fails."""
+        from chuk_acp.protocol.messages.send_message import send_notification
+
+        send_stream, _ = anyio.create_memory_object_stream(1)
+
+        # Close the stream to cause send failure
+        await send_stream.aclose()
+
+        with pytest.raises(anyio.ClosedResourceError):
+            await send_notification(send_stream, method="test_notification")
+
+    @pytest.mark.asyncio
+    async def test_cancellation_callback_error(self):
+        """Test that errors in cancellation callbacks are handled gracefully."""
+        from chuk_acp.protocol.messages.send_message import CancellationToken
+
+        def failing_callback():
+            raise RuntimeError("Callback failed!")
+
+        token = CancellationToken()
+        token.add_callback(failing_callback)
+
+        # Cancel should not raise even though callback raises
+        # (errors are logged but not propagated)
+        token.cancel()
+
+        assert token.is_cancelled
+
+    @pytest.mark.asyncio
+    async def test_send_message_with_notification_in_stream(self):
+        """Test send_message when receiving notifications before the response."""
+        from chuk_acp.protocol.messages.send_message import send_message
+        from chuk_acp.protocol.jsonrpc import (
+            create_response,
+            create_notification,
+        )
+
+        send_stream, send_recv = anyio.create_memory_object_stream(10)
+        recv_send, recv_stream = anyio.create_memory_object_stream(10)
+
+        async def responder():
+            # Receive the request
+            req = await send_recv.receive()
+
+            # Send a notification first (should be ignored)
+            notif = create_notification(method="some_event", params={"data": "test"})
+            await recv_send.send(notif)
+
+            # Then send the actual response
+            resp = create_response(id=req.id, result={"success": True})
+            await recv_send.send(resp)
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(responder)
+
+            result = await send_message(recv_stream, send_stream, method="test_method", timeout=2.0)
+
+            assert result == {"success": True}
