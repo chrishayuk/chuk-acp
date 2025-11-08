@@ -110,30 +110,51 @@ Think LSP for language tooling, but for AI coding agents.
 
 ---
 
-## Installation
+## Quick Start (60 Seconds!)
 
-### 🚀 Try It Now with uvx (No Installation!)
+### 🚀 Try Without Installation
 
-The fastest way to get started is using `uvx` to run the CLI without any installation:
+The absolute fastest way to get started - no cloning, no installation:
 
 ```bash
-# Connect to Claude Code (requires ANTHROPIC_API_KEY)
+# 1. Download a standalone agent example
+curl -O https://raw.githubusercontent.com/chuk-ai/chuk-acp/main/examples/standalone_agent.py
+
+# 2. Run it with uvx (automatically installs chuk-acp temporarily)
+uvx --from chuk-acp chuk-acp python standalone_agent.py
+
+# That's it! Start chatting with your agent.
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for full details.
+
+### Or Connect to External Agents
+
+```bash
+# Claude Code (requires ANTHROPIC_API_KEY)
 ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
 
-# Connect to Kimi agent
+# Kimi (Chinese AI assistant)
 uvx chuk-acp kimi --acp
+```
 
-# Chat with any ACP agent
-uvx chuk-acp python examples/echo_agent.py
+**That's it!** `uvx` automatically handles installation. Perfect for quick testing.
 
+---
+
+## Installation
+
+### Using uvx (Recommended for One-Off Usage)
+
+No installation needed! `uvx` runs the CLI directly:
+
+```bash
 # Single prompt mode
 uvx chuk-acp kimi --acp --prompt "Create a Python function to calculate fibonacci"
 
 # With faster validation (optional)
 uvx --from 'chuk-acp[pydantic]' chuk-acp claude-code-acp
 ```
-
-**That's it!** `uvx` automatically handles installation and runs the CLI. Perfect for quick testing or one-off usage.
 
 ### Using uv (Recommended for Development)
 

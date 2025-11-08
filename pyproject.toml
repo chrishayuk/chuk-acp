@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chuk-acp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Agent Client Protocol (ACP) implementation for Python"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -55,6 +55,9 @@ chuk-acp = "chuk_acp.cli:cli_entry"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chuk_acp"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"examples" = "share/chuk-acp/examples"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

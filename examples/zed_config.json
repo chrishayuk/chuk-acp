@@ -1,26 +1,30 @@
 {
   "agent_servers": {
-    "Echo Agent (Demo)": {
-      "command": "uvx",
+    "Echo Agent (chuk-acp demo)": {
+      "command": "python",
       "args": [
-        "--from",
-        "chuk-acp",
-        "chuk-acp",
-        "python",
-        "examples/echo_agent.py"
+        "/absolute/path/to/chuk-acp/examples/echo_agent.py"
       ],
-      "env": {}
+      "env": {},
+      "comment": "Update the path to match your local chuk-acp checkout"
     },
-    "Code Helper (Demo)": {
+    "Code Helper (chuk-acp demo)": {
+      "command": "python",
+      "args": [
+        "/absolute/path/to/chuk-acp/examples/code_helper_agent.py"
+      ],
+      "env": {},
+      "comment": "Update the path to match your local chuk-acp checkout"
+    },
+    "Example: Published Agent via uvx": {
       "command": "uvx",
       "args": [
         "--from",
-        "chuk-acp",
-        "chuk-acp",
-        "python",
-        "examples/code_helper_agent.py"
+        "your-agent-package",
+        "your-agent-command"
       ],
-      "env": {}
+      "env": {},
+      "comment": "For production: publish your agent as a package and use uvx"
     }
   }
 }

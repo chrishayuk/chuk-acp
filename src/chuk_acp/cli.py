@@ -232,7 +232,14 @@ async def main() -> None:
         )
     else:
         print("Error: Either --config or command must be specified", file=sys.stderr)
-        parser.print_help()
+        print("\nQuick examples:", file=sys.stderr)
+        print("  # Try the echo agent:", file=sys.stderr)
+        print("  chuk-acp python -m chuk_acp.examples.echo_agent", file=sys.stderr)
+        print("\n  # Or connect to an external agent:", file=sys.stderr)
+        print("  chuk-acp kimi --acp", file=sys.stderr)
+        print("\n  # Or use a config file:", file=sys.stderr)
+        print("  chuk-acp --config agent_config.json", file=sys.stderr)
+        print("\nFor more help: chuk-acp --help", file=sys.stderr)
         sys.exit(1)
 
     # Create client info
