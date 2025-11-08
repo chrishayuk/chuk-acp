@@ -2,9 +2,29 @@
 
 This directory contains examples demonstrating how to use chuk-acp to build ACP agents and clients.
 
+## 🎯 CLI Tool (Fastest Start!)
+
+The quickest way to interact with agents is using the `chuk-acp` CLI:
+
+```bash
+# Interactive chat with echo agent
+chuk-acp python examples/echo_agent.py
+
+# Connect to Kimi
+chuk-acp kimi --acp
+
+# Single prompt
+chuk-acp python examples/echo_agent.py --prompt "Hello!"
+
+# Using config file
+chuk-acp --config examples/kimi_config.json
+```
+
+See [CLI.md](../CLI.md) for complete CLI documentation.
+
 ## 🚀 Quick Start Examples (Recommended)
 
-These examples use the high-level `ACPClient` API - the easiest way to work with ACP agents.
+These examples use the high-level `ACPClient` API - the easiest way to work with ACP agents programmatically.
 
 ### 1. simple_client.py - Basic Client Usage
 

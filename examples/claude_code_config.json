@@ -1,0 +1,7 @@
+{
+  "command": "claude-code-acp",
+  "args": [],
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-your-api-key-here"
+  }
+}

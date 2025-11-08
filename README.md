@@ -19,6 +19,7 @@ A Python implementation of the [Agent Client Protocol (ACP)](https://agentclient
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+  - [CLI Tool](#cli-tool)
   - [Building an Agent](#building-an-agent)
   - [Building a Client](#building-a-client)
 - [Core Concepts](#core-concepts)
@@ -40,6 +41,7 @@ The **Agent Client Protocol (ACP)** is to AI coding agents what the Language Ser
 
 **chuk-acp** provides a complete, production-ready Python implementation of ACP, enabling you to:
 
+- 💬 **Interact with agents instantly** using the CLI (`uvx chuk-acp claude-code-acp` or `uvx chuk-acp kimi --acp`)
 - 🤖 **Build ACP-compliant coding agents** that work with any ACP-compatible editor
 - 🖥️ **Build editors/IDEs** that can connect to any ACP-compliant agent
 - 🔌 **Integrate AI capabilities** into existing development tools
@@ -83,9 +85,11 @@ Think LSP for language tooling, but for AI coding agents.
 
 ### 🔧 Developer-Friendly
 
+- **CLI Tool**: Interactive command-line client for testing agents (`uvx chuk-acp`)
+- **Zero Installation**: Run with `uvx` - no setup required
 - **Type-Safe**: Comprehensive type hints throughout
 - **Async-First**: Built on `anyio` for efficient async/await patterns
-- **Optional Pydantic**: Use Pydantic for validation, or go dependency-free
+- **Optional Pydantic**: Use Pydantic for validation, or go dependency-free with fallback
 - **Well-Documented**: Extensive examples and API documentation
 - **Production-Ready**: Tested across Python 3.11, 3.12 on Linux, macOS, Windows
 
@@ -108,29 +112,51 @@ Think LSP for language tooling, but for AI coding agents.
 
 ## Installation
 
-### Using uv (Recommended)
+### 🚀 Try It Now with uvx (No Installation!)
+
+The fastest way to get started is using `uvx` to run the CLI without any installation:
+
+```bash
+# Connect to Claude Code (requires ANTHROPIC_API_KEY)
+ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
+
+# Connect to Kimi agent
+uvx chuk-acp kimi --acp
+
+# Chat with any ACP agent
+uvx chuk-acp python examples/echo_agent.py
+
+# Single prompt mode
+uvx chuk-acp kimi --acp --prompt "Create a Python function to calculate fibonacci"
+
+# With faster validation (optional)
+uvx --from 'chuk-acp[pydantic]' chuk-acp claude-code-acp
+```
+
+**That's it!** `uvx` automatically handles installation and runs the CLI. Perfect for quick testing or one-off usage.
+
+### Using uv (Recommended for Development)
 
 [uv](https://github.com/astral-sh/uv) is a fast Python package installer:
 
 ```bash
-# Basic installation
+# Basic installation (includes CLI)
 uv pip install chuk-acp
 
-# With Pydantic validation support (recommended)
+# With Pydantic validation support (recommended for better performance)
 uv pip install chuk-acp[pydantic]
 
 # Or add to your project
 uv add chuk-acp
-uv add --optional pydantic chuk-acp[pydantic]
 ```
 
 ### Using pip
 
 ```bash
-# Basic installation
+# Basic installation (includes CLI)
 pip install chuk-acp
 
-# With Pydantic support
+# With Pydantic support (recommended)
 pip install chuk-acp[pydantic]
 ```
 
@@ -148,15 +174,125 @@ uv pip install -e ".[dev,pydantic]"
 
 - Python 3.11 or higher
 - Dependencies: `anyio`, `typing-extensions`
-- Optional: `pydantic` (for validation)
+- Optional: `pydantic` (for faster validation - works without it using fallback mechanism)
 
 ---
 
 ## Quick Start
 
+### CLI Tool - Interactive Chat with Any Agent
+
+The easiest way to interact with ACP agents is using the built-in CLI. Works instantly with `uvx` or after installation.
+
+#### Try It Now (No Installation!)
+
+```bash
+# Connect to Claude Code (requires ANTHROPIC_API_KEY)
+ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
+
+# Connect to Kimi agent
+uvx chuk-acp kimi --acp
+
+# Interactive chat opens automatically
+# Just start typing your questions!
+```
+
+#### After Installation
+
+```bash
+# Interactive mode (default)
+chuk-acp python examples/echo_agent.py
+
+# Single prompt and exit
+chuk-acp kimi --acp --prompt "Create a Python function to calculate factorial"
+
+# Using a config file
+chuk-acp --config examples/kimi_config.json
+
+# With environment variables
+chuk-acp python agent.py --env DEBUG=true --env API_KEY=xyz
+
+# Verbose output for debugging
+chuk-acp python agent.py --verbose
+```
+
+#### Interactive Mode Commands
+
+When in interactive chat mode, you can use these special commands:
+
+| Command | Description |
+|---------|-------------|
+| `/quit` or `/exit` | Exit the client |
+| `/new` | Start a new session (clears context) |
+| `/info` | Show agent information and session ID |
+
+#### Example Interactive Session
+
+**With Claude Code:**
+```bash
+$ ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
+
+╔═══════════════════════════════════════════════════════════════╗
+║           ACP Interactive Client                              ║
+╚═══════════════════════════════════════════════════════════════╝
+
+You: Create a Python function to check if a string is a palindrome
+
+Agent: Here's a Python function to check if a string is a palindrome:
+
+def is_palindrome(s):
+    # Remove spaces and convert to lowercase
+    s = s.replace(" ", "").lower()
+    # Check if string equals its reverse
+    return s == s[::-1]
+
+You: /quit
+Goodbye!
+```
+
+**With Kimi:**
+```bash
+$ uvx chuk-acp kimi --acp
+
+You: What's the best way to handle async errors in Python?
+Agent: [Kimi's response...]
+```
+
+#### Configuration Files
+
+Use standard ACP configuration format (compatible with Zed, VSCode, etc.):
+
+**claude_code_config.json:**
+```json
+{
+  "command": "claude-code-acp",
+  "args": [],
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-..."
+  }
+}
+```
+
+**kimi_config.json:**
+```json
+{
+  "command": "kimi",
+  "args": ["--acp"],
+  "env": {}
+}
+```
+
+Then use with:
+```bash
+chuk-acp --config claude_code_config.json
+chuk-acp --config kimi_config.json
+```
+
+**📖 See [CLI.md](CLI.md) for complete CLI documentation and advanced usage.**
+
 ### The Easiest Way: ACPClient
 
-The fastest way to get started is with the high-level `ACPClient`, which handles all protocol details automatically:
+The fastest way to get started programmatically is with the high-level `ACPClient`, which handles all protocol details automatically:
 
 **Option A: Direct Usage**
 ```python
@@ -1279,11 +1415,17 @@ See [LICENSE](LICENSE) for full details.
 - **PyPI Package**: https://pypi.org/project/chuk-acp/
 - **Issue Tracker**: https://github.com/chuk-ai/chuk-acp/issues
 - **Discussions**: https://github.com/chuk-ai/chuk-acp/discussions
+- **CLI Documentation**: [CLI.md](CLI.md)
 
 ### Related Projects
 
-- **Model Context Protocol (MCP)**: https://modelcontextprotocol.io
-- **Language Server Protocol (LSP)**: https://microsoft.github.io/language-server-protocol/
+**ACP Agents:**
+- **Claude Code**: https://github.com/zed-industries/claude-code-acp - Anthropic's official Claude adapter
+- **Kimi**: https://github.com/MoonshotAI/kimi-cli - AI coding agent from Moonshot AI
+
+**Protocols:**
+- **Model Context Protocol (MCP)**: https://modelcontextprotocol.io - Data & tool access for agents
+- **Language Server Protocol (LSP)**: https://microsoft.github.io/language-server-protocol/ - Inspiration for ACP
 
 ### Community
 

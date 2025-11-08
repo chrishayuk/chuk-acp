@@ -50,6 +50,9 @@ Homepage = "https://github.com/chuk-ai/chuk-acp"
 Documentation = "https://agentclientprotocol.com"
 Repository = "https://github.com/chuk-ai/chuk-acp"
 
+[project.scripts]
+chuk-acp = "chuk_acp.cli:cli_entry"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/chuk_acp"]
 
