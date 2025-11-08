@@ -89,27 +89,37 @@ uv run python examples/config_example.py
 
 ### 4. echo_agent.py - Building an Agent
 
-A complete ACP agent implementation that echoes back user messages:
+A complete ACP agent implementation using the high-level `ACPAgent` API - **just 35 lines of code!**
 
 ```bash
-# Run directly to see agent behavior
-uv run python examples/echo_agent.py
-# (Note: Agents are stdin/stdout servers, so running alone won't show much)
+# Test with the CLI
+uv run chuk-acp python examples/echo_agent.py
 
-# Use with a client
+# Use with a client programmatically
 uv run python examples/simple_client.py
 ```
 
 **What it demonstrates:**
-- Agent server structure (stdin/stdout communication)
-- Handling ACP protocol methods
-- Using library helpers for responses
-- Sending notifications
+- Using the high-level `ACPAgent` base class
+- Implementing `get_agent_info()` to define agent metadata
+- Implementing `handle_prompt()` for agent logic
+- Automatic protocol handling (init, sessions, responses)
 
-**Key Methods Implemented:**
-- `initialize` - Protocol handshake
-- `session/new` - Session creation
-- `session/prompt` - Handling user prompts
+**Code highlights:**
+```python
+from chuk_acp.agent import ACPAgent, AgentSession
+from chuk_acp.protocol.types import AgentInfo, Content
+
+class EchoAgent(ACPAgent):
+    def get_agent_info(self) -> AgentInfo:
+        return AgentInfo(name="echo-agent", version="0.1.0")
+
+    async def handle_prompt(self, session: AgentSession, prompt: List[Content]) -> str:
+        text = prompt[0].get("text", "") if prompt else ""
+        return f"Echo: You said '{text}'"
+```
+
+**That's it!** The `ACPAgent` base class handles all protocol details automatically.
 
 ## 📚 Advanced Examples (Low-Level API)
 
@@ -197,6 +207,32 @@ async with ACPClient.from_config(config) as client:
 - ✅ Resource cleanup guaranteed
 - ✅ Simple, readable code
 - ✅ Standard config format (compatible with Zed, VSCode, etc.)
+
+### High-Level Agent Pattern (Recommended for Building Agents)
+
+```python
+from chuk_acp.agent import ACPAgent, AgentSession
+from chuk_acp.protocol.types import AgentInfo, Content
+
+class MyAgent(ACPAgent):
+    def get_agent_info(self) -> AgentInfo:
+        return AgentInfo(name="my-agent", version="1.0.0")
+
+    async def handle_prompt(self, session: AgentSession, prompt: List[Content]) -> str:
+        text = prompt[0].get("text", "") if prompt else ""
+        return f"Response to: {text}"
+
+if __name__ == "__main__":
+    MyAgent().run()
+```
+
+**Benefits:**
+- ✅ Protocol details handled automatically (initialize, sessions, responses)
+- ✅ Just implement 2 methods: `get_agent_info()` and `handle_prompt()`
+- ✅ Session management included
+- ✅ Error handling and logging built-in
+- ✅ Works with any ACP client or editor
+- ✅ **80% less code** than manual implementation
 
 ### Low-Level Pattern (Advanced)
 

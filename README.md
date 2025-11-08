@@ -42,8 +42,8 @@ The **Agent Client Protocol (ACP)** is to AI coding agents what the Language Ser
 **chuk-acp** provides a complete, production-ready Python implementation of ACP, enabling you to:
 
 - 💬 **Interact with agents instantly** using the CLI (`uvx chuk-acp claude-code-acp` or `uvx chuk-acp kimi --acp`)
-- 🤖 **Build ACP-compliant coding agents** that work with any ACP-compatible editor
-- 🖥️ **Build editors/IDEs** that can connect to any ACP-compliant agent
+- 🤖 **Build ACP-compliant coding agents** easily with the high-level `ACPAgent` API
+- 🖥️ **Build editors/IDEs** that can connect to any ACP-compliant agent with `ACPClient`
 - 🔌 **Integrate AI capabilities** into existing development tools
 - 🧪 **Test and develop** against the ACP specification
 
@@ -353,6 +353,65 @@ async with ACPClient.from_config(config) as client:
 - ✅ Supports standard ACP configuration format
 
 **Want more control?** The low-level API gives you fine-grained control over the protocol. See the examples below.
+
+---
+
+### Building an Agent
+
+The fastest way to build an ACP agent is with the high-level `ACPAgent` class:
+
+```python
+"""my_agent.py"""
+from typing import List
+from chuk_acp.agent import ACPAgent, AgentSession
+from chuk_acp.protocol.types import AgentInfo, Content
+
+class MyAgent(ACPAgent):
+    """Your custom agent implementation."""
+
+    def get_agent_info(self) -> AgentInfo:
+        """Return agent information."""
+        return AgentInfo(
+            name="my-agent",
+            version="1.0.0",
+            title="My Custom Agent"
+        )
+
+    async def handle_prompt(
+        self, session: AgentSession, prompt: List[Content]
+    ) -> str:
+        """Handle a prompt - this is where your agent logic goes."""
+        # Extract text from prompt
+        text = prompt[0].get("text", "") if prompt else ""
+
+        # Your agent logic here
+        response = f"I received: {text}"
+
+        # Return the response
+        return response
+
+if __name__ == "__main__":
+    agent = MyAgent()
+    agent.run()
+```
+
+**Run your agent:**
+```bash
+# Test with CLI
+chuk-acp python my_agent.py
+
+# Or use with editors
+# Add to your editor's ACP configuration
+```
+
+**What `ACPAgent` does automatically:**
+- ✅ Handles all protocol messages (initialize, session/new, session/prompt)
+- ✅ Manages sessions and routing
+- ✅ Sends responses in correct format
+- ✅ Error handling and logging
+- ✅ Stdin/stdout transport
+
+**Real example:** See [`examples/echo_agent.py`](examples/echo_agent.py) - a complete working agent in just 35 lines!
 
 ---
 

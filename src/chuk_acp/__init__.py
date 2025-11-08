@@ -89,6 +89,12 @@ from .client import (
     load_agent_config,
 )
 
+# High-level agent
+from .agent import (
+    ACPAgent,
+    AgentSession,
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -163,4 +169,7 @@ __all__ = [
     "SessionInfo",
     "AgentConfig",
     "load_agent_config",
+    # Agent
+    "ACPAgent",
+    "AgentSession",
 ]
