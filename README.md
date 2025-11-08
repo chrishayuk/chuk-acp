@@ -1,5 +1,13 @@
 # chuk-acp
 
+[![CI](https://github.com/chuk-ai/chuk-acp/actions/workflows/ci.yml/badge.svg)](https://github.com/chuk-ai/chuk-acp/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/chuk-acp.svg)](https://badge.fury.io/py/chuk-acp)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![codecov](https://codecov.io/gh/chuk-ai/chuk-acp/branch/main/graph/badge.svg)](https://codecov.io/gh/chuk-ai/chuk-acp)
+
 A Python implementation of the [Agent Client Protocol (ACP)](https://agentclientprotocol.com) - the standard protocol for communication between code editors and AI coding agents.
 
 ## Overview
@@ -164,7 +172,7 @@ ACP reuses MCP data structures for content types and resources, enabling seamles
 
 ## Contributing
 
-Contributions are welcome! This project follows the Apache 2.0 license.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, workflow guidelines, and how to submit pull requests.
 
 ## License
 
