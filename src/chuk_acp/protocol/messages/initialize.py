@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from .send_message import send_message
+from ..constants import METHOD_INITIALIZE, METHOD_AUTHENTICATE
 from ..types import AgentInfo, ClientInfo, AgentCapabilities, ClientCapabilities
 
 
@@ -55,7 +56,7 @@ async def send_initialize(
     result = await send_message(
         read_stream,
         write_stream,
-        method="initialize",
+        method=METHOD_INITIALIZE,
         params=params,
         timeout=timeout,
     )
@@ -103,7 +104,7 @@ async def send_authenticate(
     return await send_message(
         read_stream,
         write_stream,
-        method="authenticate",
+        method=METHOD_AUTHENTICATE,
         params=params,
         timeout=timeout,
     )

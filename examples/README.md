@@ -16,10 +16,25 @@ A minimal example showing the basics of connecting to an ACP agent and performin
 
 **Run it:**
 ```bash
-python examples/quick_start.py
+uv run python examples/quick_start.py
 ```
 
-### 2. Comprehensive Demo (`comprehensive_demo.py`)
+### 2. Simple Client (`simple_client.py`)
+
+A straightforward client example showing basic ACP communication.
+
+**What it demonstrates:**
+- Connecting to the echo agent
+- Protocol handshake
+- Session creation
+- Sending a single prompt
+
+**Run it:**
+```bash
+uv run python examples/simple_client.py
+```
+
+### 3. Comprehensive Demo (`comprehensive_demo.py`)
 
 A complete walkthrough of all major ACP protocol features with detailed output.
 
@@ -34,40 +49,67 @@ A complete walkthrough of all major ACP protocol features with detailed output.
 
 **Run it:**
 ```bash
-python examples/comprehensive_demo.py
+uv run python examples/comprehensive_demo.py
 ```
 
-### 3. Echo Agent (`echo_agent.py`)
+### 4. Echo Agent (`echo_agent.py`)
 
-A simple standalone ACP agent server that echoes back messages.
+A simple standalone ACP agent server that echoes back messages. This demonstrates how to build an agent using the chuk-acp library.
 
 **What it demonstrates:**
-- Building a basic ACP-compliant agent
+- Building a basic ACP-compliant agent using library helpers
+- Using `create_response()` and `create_error_response()` for JSON-RPC
+- Using `create_notification()` for session updates
+- Using method constants (`METHOD_INITIALIZE`, etc.)
 - Handling initialize requests
-- Processing prompts
-- JSON-RPC message handling
+- Processing prompts and sessions
+- JSON-RPC message handling via stdin/stdout
 
-**Run it:**
-```bash
-python examples/echo_agent.py
-```
+**Important:** The echo agent is designed to run as a **server process** that communicates via stdin/stdout. Running it directly won't show any output - it waits for JSON-RPC messages on stdin.
 
-Then connect to it with a client in another terminal.
+**How to use it:**
+
+1. **With simple_client.py (Recommended):**
+   ```bash
+   uv run python examples/simple_client.py
+   ```
+   The simple_client will automatically launch echo_agent.py as a subprocess.
+
+2. **Manual testing with piped input:**
+   ```bash
+   # From project root directory:
+   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' | uv run python examples/echo_agent.py
+
+   # You should see a JSON response:
+   # {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentInfo":{...}}}
+   ```
+
+3. **As a subprocess in your own code:**
+   ```python
+   from chuk_acp import stdio_transport
+
+   async with stdio_transport("python", ["examples/echo_agent.py"]) as (read, write):
+       # Send messages to the agent
+       pass
+   ```
+
+The agent logs debug information to `/tmp/echo_agent.log` for troubleshooting.
 
 ## Requirements
 
 All examples require:
 - Python 3.11+
-- chuk-acp installed (`pip install -e .` from project root)
-- anyio (installed automatically with chuk-acp)
+- chuk-acp installed with `uv pip install -e .` from project root
+- Or install from PyPI: `uv pip install chuk-acp[pydantic]`
 
 ## Learning Path
 
 If you're new to ACP, we recommend following this order:
 
 1. **Start with `quick_start.py`** - Get familiar with basic concepts
-2. **Review `echo_agent.py`** - Understand how agents work
-3. **Explore `comprehensive_demo.py`** - See all features in action
+2. **Try `simple_client.py`** - See a minimal client implementation
+3. **Review `echo_agent.py`** - Understand how agents work
+4. **Explore `comprehensive_demo.py`** - See all features in action
 
 ## Common Patterns
 
@@ -121,7 +163,7 @@ For complete API documentation, see the main project README and the ACP specific
 
 If you encounter issues with any examples:
 1. Ensure you're using Python 3.11+
-2. Verify chuk-acp is installed: `pip list | grep chuk-acp`
+2. Verify chuk-acp is installed: `uv pip list | grep chuk-acp`
 3. Check the main project's issue tracker
 
 ## Contributing

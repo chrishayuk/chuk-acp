@@ -39,129 +39,110 @@ from chuk_acp.protocol.messages.terminal import (
 from chuk_acp.transport.stdio import stdio_transport
 
 
-# First, create a simple ACP agent server script
+# First, create a simple ACP agent server script that uses the chuk-acp library
 AGENT_SERVER_CODE = '''
-"""Simple ACP agent that responds to protocol messages."""
+"""Simple ACP agent that demonstrates using the chuk-acp library."""
 
 import sys
 import json
-import os
-import tempfile
+
+# Import chuk-acp library components
+from chuk_acp.protocol import (
+    create_response,
+    create_error_response,
+    METHOD_INITIALIZE,
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_PROMPT,
+    METHOD_FS_READ_TEXT_FILE,
+    METHOD_FS_WRITE_TEXT_FILE,
+    METHOD_TERMINAL_CREATE,
+)
+from chuk_acp.protocol.types import (
+    AgentInfo,
+    AgentCapabilities,
+)
 
 def handle_request(request):
-    """Handle incoming JSON-RPC requests."""
+    """Handle incoming JSON-RPC requests using chuk-acp library."""
     method = request.get("method")
     params = request.get("params", {})
     req_id = request.get("id")
 
-    # Initialize
-    if method == "initialize":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
+    try:
+        # Initialize
+        if method == METHOD_INITIALIZE:
+            agent_info = AgentInfo(name="demo-agent", version="1.0.0")
+            agent_capabilities = AgentCapabilities(
+                supportsFilesystem=True,
+                supportsTerminal=True
+            )
+
+            result = {
                 "protocolVersion": 1,
-                "agentInfo": {
-                    "name": "demo-agent",
-                    "version": "1.0.0"
-                },
-                "agentCapabilities": {
-                    "supportsFilesystem": True,
-                    "supportsTerminal": True
-                }
+                "agentInfo": agent_info.model_dump(exclude_none=True),
+                "agentCapabilities": agent_capabilities.model_dump(exclude_none=True)
             }
-        }
+            return create_response(id=req_id, result=result)
 
-    # Session new
-    elif method == "session/new":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "sessionId": "demo-session-123"
-            }
-        }
+        # Session new
+        elif method == METHOD_SESSION_NEW:
+            result = {"sessionId": "demo-session-123"}
+            return create_response(id=req_id, result=result)
 
-    # Session prompt
-    elif method == "session/prompt":
-        prompt_content = params.get("prompt", [])
-        prompt_text = prompt_content[0].get("text", "") if prompt_content else ""
+        # Session prompt
+        elif method == METHOD_SESSION_PROMPT:
+            result = {"stopReason": "end_turn"}
+            return create_response(id=req_id, result=result)
 
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "stopReason": "end_turn",
-                "agentMessage": [{
-                    "type": "text",
-                    "text": f"Agent received: {prompt_text}. Processing complete!"
-                }]
-            }
-        }
+        # Filesystem read
+        elif method == METHOD_FS_READ_TEXT_FILE:
+            path = params.get("path", "")
+            try:
+                with open(path, "r") as f:
+                    contents = f.read()
+                result = {"contents": contents}
+                return create_response(id=req_id, result=result)
+            except Exception as e:
+                return create_error_response(
+                    id=req_id,
+                    code=-32603,
+                    message=f"Read error: {e}"
+                )
 
-    # Filesystem read
-    elif method == "fs/read_text_file":
-        path = params.get("path", "")
-        try:
-            with open(path, "r") as f:
-                contents = f.read()
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": {"contents": contents}
-            }
-        except Exception as e:
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "error": {
-                    "code": -32603,
-                    "message": f"Read error: {e}"
-                }
-            }
+        # Filesystem write
+        elif method == METHOD_FS_WRITE_TEXT_FILE:
+            path = params.get("path", "")
+            contents = params.get("contents", "")
+            try:
+                with open(path, "w") as f:
+                    f.write(contents)
+                return create_response(id=req_id, result={})
+            except Exception as e:
+                return create_error_response(
+                    id=req_id,
+                    code=-32603,
+                    message=f"Write error: {e}"
+                )
 
-    # Filesystem write
-    elif method == "fs/write_text_file":
-        path = params.get("path", "")
-        contents = params.get("contents", "")
-        try:
-            with open(path, "w") as f:
-                f.write(contents)
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": {}
-            }
-        except Exception as e:
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "error": {
-                    "code": -32603,
-                    "message": f"Write error: {e}"
-                }
-            }
+        # Terminal create
+        elif method == METHOD_TERMINAL_CREATE:
+            result = {"id": "term-123", "command": "bash"}
+            return create_response(id=req_id, result=result)
 
-    # Terminal create
-    elif method == "terminal/create":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "id": "term-123"
-            }
-        }
+        # Default: method not found
+        else:
+            return create_error_response(
+                id=req_id,
+                code=-32601,
+                message=f"Method not found: {method}"
+            )
 
-    # Default: method not found
-    else:
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {
-                "code": -32601,
-                "message": f"Method not found: {method}"
-            }
-        }
+    except Exception as e:
+        return create_error_response(
+            id=req_id,
+            code=-32603,
+            message=f"Internal error: {e}"
+        )
 
 def main():
     """Main server loop."""
@@ -177,7 +158,9 @@ def main():
             try:
                 request = json.loads(line)
                 response = handle_request(request)
-                sys.stdout.write(json.dumps(response) + "\\n")
+                # Serialize response object using model_dump
+                response_dict = response.model_dump(exclude_none=True)
+                sys.stdout.write(json.dumps(response_dict) + "\\n")
                 sys.stdout.flush()
             except json.JSONDecodeError as e:
                 sys.stderr.write(f"JSON decode error: {e}\\n")

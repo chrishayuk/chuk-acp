@@ -4,6 +4,15 @@ from typing import Optional, List, Dict, Any
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from .send_message import send_message, send_notification, CancellationToken
+from ..constants import (
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_LOAD,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+    METHOD_SESSION_SET_MODE,
+    METHOD_SESSION_CANCEL,
+    METHOD_SESSION_REQUEST_PERMISSION,
+)
 from ..types import (
     Content,
     MCPServer,
@@ -63,7 +72,7 @@ async def send_session_new(
     result = await send_message(
         read_stream,
         write_stream,
-        method="session/new",
+        method=METHOD_SESSION_NEW,
         params=params,
         timeout=timeout,
     )
@@ -109,7 +118,7 @@ async def send_session_load(
     return await send_message(
         read_stream,
         write_stream,
-        method="session/load",
+        method=METHOD_SESSION_LOAD,
         params=params,
         timeout=timeout,
     )
@@ -157,7 +166,7 @@ async def send_session_prompt(
     result = await send_message(
         read_stream,
         write_stream,
-        method="session/prompt",
+        method=METHOD_SESSION_PROMPT,
         params=params,
         timeout=timeout,
         cancellation_token=cancellation_token,
@@ -197,7 +206,7 @@ async def send_session_set_mode(
     return await send_message(
         read_stream,
         write_stream,
-        method="session/set_mode",
+        method=METHOD_SESSION_SET_MODE,
         params=params,
         timeout=timeout,
     )
@@ -217,7 +226,7 @@ async def send_session_cancel(
 
     await send_notification(
         write_stream,
-        method="session/cancel",
+        method=METHOD_SESSION_CANCEL,
         params=params,
     )
 
@@ -268,7 +277,7 @@ async def send_session_update(
 
     await send_notification(
         write_stream,
-        method="session/update",
+        method=METHOD_SESSION_UPDATE,
         params=params,
     )
 
@@ -304,7 +313,7 @@ async def send_session_request_permission(
     result = await send_message(
         read_stream,
         write_stream,
-        method="session/request_permission",
+        method=METHOD_SESSION_REQUEST_PERMISSION,
         params=params,
         timeout=timeout,
     )

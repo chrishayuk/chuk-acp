@@ -47,22 +47,22 @@ uv run pytest
 
 ```bash
 # Format code with Black
-black .
+uv run black .
 
 # Lint with Ruff
-ruff check .
+uv run ruff check .
 
 # Fix auto-fixable issues
-ruff check --fix .
+uv run ruff check --fix .
 
 # Type checking with mypy
-mypy src/chuk_acp
+uv run mypy src/chuk_acp
 
 # Security scanning with Bandit
-bandit -r src/chuk_acp -ll
+uv run bandit -r src/chuk_acp -ll
 
 # Run all checks at once
-make check  # If using Makefile
+make check
 ```
 
 ### Code Style

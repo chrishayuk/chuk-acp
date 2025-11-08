@@ -108,17 +108,29 @@ Think LSP for language tooling, but for AI coding agents.
 
 ## Installation
 
-### Basic Installation
+### Using uv (Recommended)
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package installer:
 
 ```bash
-pip install chuk-acp
+# Basic installation
+uv pip install chuk-acp
+
+# With Pydantic validation support (recommended)
+uv pip install chuk-acp[pydantic]
+
+# Or add to your project
+uv add chuk-acp
+uv add --optional pydantic chuk-acp[pydantic]
 ```
 
-### With Pydantic Support
-
-For runtime validation and enhanced type safety:
+### Using pip
 
 ```bash
+# Basic installation
+pip install chuk-acp
+
+# With Pydantic support
 pip install chuk-acp[pydantic]
 ```
 
@@ -142,83 +154,233 @@ uv pip install -e ".[dev,pydantic]"
 
 ## Quick Start
 
-### Building an Agent
+Get started with chuk-acp in 5 minutes with these simple, self-contained examples!
 
-Create an ACP agent that responds to prompts:
+### Option A: Using the Provided Examples (Easiest)
 
-```python
-"""my_agent.py - A simple ACP agent"""
-import asyncio
-from chuk_acp.protocol.messages import send_session_update
-from chuk_acp.protocol.types import TextContent
-from chuk_acp.transport import stdio_transport
+The fastest way to see ACP in action:
 
-async def handle_prompt(session_id: str, prompt: list, write_stream):
-    """Process a user prompt and send response."""
+```bash
+# Install
+uv pip install chuk-acp[pydantic]
 
-    # Extract user's text
-    user_text = prompt[0].get('text', '')
-
-    # Send response back to client
-    await send_session_update(
-        write_stream,
-        session_id=session_id,
-        agent_message_chunk=TextContent(
-            text=f"You asked: {user_text}\n\nHere's my response..."
-        )
-    )
-
-# Run the agent
-if __name__ == "__main__":
-    # Your agent implementation here
-    # See examples/echo_agent.py for complete example
-    pass
+# Run the quick start example
+uv run python examples/quick_start.py
 ```
 
-### Building a Client
+**Output:**
+```
+=== ACP Quick Start ===
 
-Connect to an agent and send prompts:
+1. Creating agent server...
+2. Connecting to agent...
+3. Initializing protocol...
+   Connected to: echo-agent
+4. Creating session...
+   Session ID: session-1
+5. Sending prompt...
+   User: Hello, Agent!
+   Agent: Echo: Hello, Agent!
+
+✓ Success!
+```
+
+### Option B: Build Your Own (10 Minutes)
+
+Create a complete ACP client and agent from scratch.
+
+#### Step 1: Install
+
+```bash
+uv pip install chuk-acp[pydantic]
+```
+
+#### Step 2: Create an Agent
+
+Save this as `echo_agent.py`:
 
 ```python
-"""my_client.py - Connect to an ACP agent"""
-import asyncio
-from chuk_acp import (
-    stdio_transport,
-    send_initialize,
-    send_session_new,
-    send_session_prompt,
-    ClientInfo,
-    ClientCapabilities,
-    TextContent,
+"""echo_agent.py - A simple ACP agent"""
+import json
+import sys
+import uuid
+
+from chuk_acp.protocol import (
+    create_response,
+    create_notification,
+    METHOD_INITIALIZE,
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
 )
+from chuk_acp.protocol.types import AgentInfo, AgentCapabilities, TextContent
+
+# Read messages from stdin, write to stdout
+for line in sys.stdin:
+    msg = json.loads(line.strip())
+    method = msg.get("method")
+    params = msg.get("params", {})
+    msg_id = msg.get("id")
+
+    # Route to handlers
+    if method == METHOD_INITIALIZE:
+        result = {
+            "protocolVersion": 1,
+            "agentInfo": AgentInfo(name="echo-agent", version="1.0.0").model_dump(),
+            "agentCapabilities": AgentCapabilities().model_dump(),
+        }
+        response = create_response(id=msg_id, result=result)
+
+    elif method == METHOD_SESSION_NEW:
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        response = create_response(id=msg_id, result={"sessionId": session_id})
+
+    elif method == METHOD_SESSION_PROMPT:
+        session_id = params["sessionId"]
+        user_text = params["prompt"][0].get("text", "")
+
+        # Send a notification with the echo
+        notification = create_notification(
+            method=METHOD_SESSION_UPDATE,
+            params={
+                "sessionId": session_id,
+                "agentMessageChunk": TextContent(text=f"Echo: {user_text}").model_dump(),
+            },
+        )
+        sys.stdout.write(json.dumps(notification.model_dump()) + "\n")
+        sys.stdout.flush()
+
+        # Send the response
+        response = create_response(id=msg_id, result={"stopReason": "end_turn"})
+
+    else:
+        continue
+
+    sys.stdout.write(json.dumps(response.model_dump()) + "\n")
+    sys.stdout.flush()
+```
+
+#### Step 3: Create a Client
+
+Save this as `my_client.py`:
+
+```python
+"""my_client.py - Connect to the echo agent"""
+import asyncio
+import uuid
+import anyio
+
+from chuk_acp import stdio_transport, send_initialize, send_session_new
+from chuk_acp.protocol import (
+    create_request,
+    JSONRPCNotification,
+    JSONRPCResponse,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+)
+from chuk_acp.protocol.types import ClientInfo, ClientCapabilities, TextContent
+
 
 async def main():
-    # Connect to agent
-    async with stdio_transport("python", ["my_agent.py"]) as (read, write):
-
-        # Initialize connection
-        init_result = await send_initialize(
-            read, write,
+    # Connect to the agent
+    async with stdio_transport("python", ["echo_agent.py"]) as (read, write):
+        # Initialize
+        init = await send_initialize(
+            read,
+            write,
             protocol_version=1,
             client_info=ClientInfo(name="my-client", version="1.0.0"),
-            capabilities=ClientCapabilities()
+            capabilities=ClientCapabilities(),
         )
-        print(f"Connected to {init_result.agentInfo.name}")
+        print(f"✓ Connected to {init.agentInfo.name}")
 
         # Create session
-        session = await send_session_new(read, write, cwd="/path/to/project")
+        session = await send_session_new(read, write, cwd="/tmp")
+        print(f"✓ Session: {session.sessionId}")
 
-        # Send prompt
-        result = await send_session_prompt(
-            read, write,
-            session_id=session.sessionId,
-            prompt=[TextContent(text="Help me write a function")]
+        # Send prompt and capture the echo response
+        print("\nSending: Hello!")
+        request = create_request(
+            method=METHOD_SESSION_PROMPT,
+            params={
+                "sessionId": session.sessionId,
+                "prompt": [TextContent(text="Hello!").model_dump()],
+            },
+            id=str(uuid.uuid4()),
         )
+        await write.send(request)
 
-        print(f"Agent finished: {result.stopReason}")
+        # Listen for the agent's response
+        agent_message = ""
+        with anyio.fail_after(10.0):
+            while True:
+                msg = await read.receive()
 
-asyncio.run(main())
+                # Capture session/update notification
+                if isinstance(msg, JSONRPCNotification) and msg.method == METHOD_SESSION_UPDATE:
+                    params = msg.params or {}
+                    if "agentMessageChunk" in params:
+                        chunk = params["agentMessageChunk"]
+                        if "text" in chunk:
+                            agent_message = chunk["text"]
+
+                # Wait for final response
+                if isinstance(msg, JSONRPCResponse) and msg.id == request.id:
+                    break
+
+        print(f"Agent says: {agent_message}")
+        print("✓ Done!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
+
+#### Step 4: Run It!
+
+```bash
+uv run python my_client.py
+```
+
+**Output:**
+```
+✓ Connected to echo-agent
+✓ Session: session-a1b2c3d4
+
+Sending: Hello!
+Agent says: Echo: Hello!
+✓ Done!
+```
+
+🎉 **That's it!** You've built a working ACP agent and client.
+
+### What You Learned
+
+**Option A** showed you the fastest path - running pre-built examples.
+
+**Option B** taught you:
+- **Agents**: Read JSON-RPC from stdin, write to stdout using `create_response()` and `create_notification()`
+- **Clients**: Connect via `stdio_transport`, use `send_initialize()` and `send_session_new()`, manually handle messages to capture notifications
+- **Protocol flow**: Initialize → Create Session → Send Prompts (with notifications) → Get Response
+- **Best practices**: Use library types (`TextContent`, `AgentInfo`) and method constants (`METHOD_INITIALIZE`)
+
+### Next Steps
+
+**Explore More Features:**
+- [examples/simple_client.py](examples/simple_client.py) - Clean client with notification handling
+- [examples/echo_agent.py](examples/echo_agent.py) - Production-ready agent with error handling
+- [examples/comprehensive_demo.py](examples/comprehensive_demo.py) - Filesystem, terminal, all ACP features
+
+**Build Something:**
+- Add file system access to your agent (see Example 3 below)
+- Implement tool calls and permission requests
+- Support multiple concurrent sessions
+- Add streaming for long responses
+
+**Learn More:**
+- [API Reference](#api-reference) - Complete API documentation
+- [Protocol Support](#protocol-support) - What's supported in ACP v1
+- [ACP Specification](https://agentclientprotocol.com) - Official protocol docs
 
 ---
 
@@ -292,32 +454,48 @@ Strongly-typed protocol structures:
 
 ## Complete Examples
 
-### Example 1: Echo Agent (Minimal)
+### Example 1: Echo Agent (Using Library)
 
-A minimal agent that echoes user input:
+A minimal agent that echoes user input using chuk-acp library helpers:
 
 ```python
-"""echo_agent.py"""
+"""echo_agent.py - Agent using chuk-acp library"""
 import json
 import sys
+import uuid
 from typing import Dict, Any
+
+from chuk_acp.protocol import (
+    create_response,
+    create_error_response,
+    create_notification,
+    METHOD_INITIALIZE,
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+)
+from chuk_acp.protocol.types import (
+    AgentInfo,
+    AgentCapabilities,
+    TextContent,
+)
 
 class EchoAgent:
     def __init__(self):
         self.sessions = {}
 
     def handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Use library types instead of manual dict construction."""
+        agent_info = AgentInfo(name="echo-agent", version="0.1.0")
+        agent_capabilities = AgentCapabilities()
+
         return {
             "protocolVersion": 1,
-            "agentInfo": {
-                "name": "echo-agent",
-                "version": "0.1.0"
-            },
-            "agentCapabilities": {}
+            "agentInfo": agent_info.model_dump(exclude_none=True),
+            "agentCapabilities": agent_capabilities.model_dump(exclude_none=True),
         }
 
     def handle_session_new(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        import uuid
         session_id = f"session_{uuid.uuid4().hex[:8]}"
         self.sessions[session_id] = {"cwd": params.get("cwd")}
         return {"sessionId": session_id}
@@ -326,19 +504,20 @@ class EchoAgent:
         session_id = params["sessionId"]
         prompt = params["prompt"]
 
-        # Send update notification
-        update = {
-            "jsonrpc": "2.0",
-            "method": "session/update",
-            "params": {
+        # Use library helpers to create notification
+        text_content = TextContent(
+            text=f"Echo: You said '{prompt[0].get('text', '')}'"
+        )
+
+        notification = create_notification(
+            method=METHOD_SESSION_UPDATE,
+            params={
                 "sessionId": session_id,
-                "agentMessageChunk": {
-                    "type": "text",
-                    "text": f"Echo: {prompt[0].get('text', '')}"
-                }
-            }
-        }
-        sys.stdout.write(json.dumps(update) + "\n")
+                "agentMessageChunk": text_content.model_dump(exclude_none=True),
+            },
+        )
+
+        sys.stdout.write(json.dumps(notification.model_dump(exclude_none=True)) + "\n")
         sys.stdout.flush()
 
         return {"stopReason": "end_turn"}
@@ -347,63 +526,63 @@ class EchoAgent:
         for line in sys.stdin:
             message = json.loads(line.strip())
             method = message.get("method")
+            msg_id = message.get("id")
 
-            if method == "initialize":
-                result = self.handle_initialize(message.get("params", {}))
-            elif method == "session/new":
-                result = self.handle_session_new(message.get("params", {}))
-            elif method == "session/prompt":
-                result = self.handle_session_prompt(message.get("params", {}))
-            else:
-                continue
+            try:
+                # Route to handler using method constants
+                if method == METHOD_INITIALIZE:
+                    result = self.handle_initialize(message.get("params", {}))
+                elif method == METHOD_SESSION_NEW:
+                    result = self.handle_session_new(message.get("params", {}))
+                elif method == METHOD_SESSION_PROMPT:
+                    result = self.handle_session_prompt(message.get("params", {}))
+                else:
+                    raise Exception(f"Unknown method: {method}")
 
-            response = {
-                "jsonrpc": "2.0",
-                "id": message.get("id"),
-                "result": result
-            }
-            sys.stdout.write(json.dumps(response) + "\n")
+                # Use library helper to create response
+                response = create_response(id=msg_id, result=result)
+            except Exception as e:
+                # Use library helper for error responses
+                response = create_error_response(id=msg_id, code=-32603, message=str(e))
+
+            sys.stdout.write(json.dumps(response.model_dump(exclude_none=True)) + "\n")
             sys.stdout.flush()
 
 if __name__ == "__main__":
     EchoAgent().run()
 ```
 
+> **Note**: This demonstrates using the library's protocol helpers (`create_response`, `create_notification`, `TextContent`, etc.) instead of manual JSON construction. See `examples/echo_agent.py` for the complete implementation.
+
 ### Example 2: Client with Session Updates
 
-Handle streaming updates from agent:
+Capture and handle streaming updates from agent:
 
 ```python
-"""client_with_updates.py"""
+"""client_with_updates.py - Capture session/update notifications"""
 import asyncio
+import uuid
+
+import anyio
+
 from chuk_acp import (
     stdio_transport,
     send_initialize,
     send_session_new,
-    send_session_prompt,
     ClientInfo,
     ClientCapabilities,
     TextContent,
 )
-
-async def handle_update(update: dict):
-    """Handle session/update notifications from agent."""
-    params = update.get("params", {})
-
-    if "agentMessageChunk" in params:
-        chunk = params["agentMessageChunk"]
-        if chunk["type"] == "text":
-            print(f"Agent: {chunk['text']}")
-
-    if "thought" in params:
-        print(f"[Thinking: {params['thought']}]")
-
-    if "toolCall" in params:
-        tool = params["toolCall"]
-        print(f"[Calling: {tool['name']}]")
+from chuk_acp.protocol import (
+    create_request,
+    JSONRPCNotification,
+    JSONRPCResponse,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+)
 
 async def main():
-    async with stdio_transport("python", ["echo_agent.py"]) as (read, write):
+    async with stdio_transport("python", ["examples/echo_agent.py"]) as (read, write):
         # Initialize
         init_result = await send_initialize(
             read, write,
@@ -411,22 +590,71 @@ async def main():
             client_info=ClientInfo(name="client", version="1.0.0"),
             capabilities=ClientCapabilities()
         )
+        print(f"Connected to {init_result.agentInfo.name}")
 
         # Create session
         session = await send_session_new(read, write, cwd="/tmp")
 
-        # Send prompt (will receive updates)
-        result = await send_session_prompt(
-            read, write,
-            session_id=session.sessionId,
-            prompt=[TextContent(text="Write a hello world function")],
-            timeout=60.0
-        )
+        # Send prompt and capture notifications
+        prompt_text = "Write a hello world function"
+        print(f"User: {prompt_text}")
 
-        print(f"Completed: {result.stopReason}")
+        request_id = str(uuid.uuid4())
+        request = create_request(
+            method=METHOD_SESSION_PROMPT,
+            params={
+                "sessionId": session.sessionId,
+                "prompt": [TextContent(text=prompt_text).model_dump(exclude_none=True)],
+            },
+            id=request_id,
+        )
+        await write.send(request)
+
+        # Collect notifications and response
+        agent_messages = []
+        stop_reason = None
+
+        with anyio.fail_after(60.0):
+            while stop_reason is None:
+                message = await read.receive()
+
+                # Handle session/update notifications
+                if isinstance(message, JSONRPCNotification):
+                    if message.method == METHOD_SESSION_UPDATE:
+                        params = message.params or {}
+
+                        # Agent message chunks
+                        if "agentMessageChunk" in params:
+                            chunk = params["agentMessageChunk"]
+                            if isinstance(chunk, dict) and "text" in chunk:
+                                agent_messages.append(chunk["text"])
+
+                        # Thoughts (optional)
+                        if "thought" in params:
+                            print(f"[Thinking: {params['thought']}]")
+
+                        # Tool calls (optional)
+                        if "toolCall" in params:
+                            tool = params["toolCall"]
+                            print(f"[Calling: {tool.get('name')}]")
+
+                # Handle response
+                elif isinstance(message, JSONRPCResponse):
+                    if message.id == request_id:
+                        result = message.result
+                        if isinstance(result, dict):
+                            stop_reason = result.get("stopReason")
+
+        # Display captured agent messages
+        if agent_messages:
+            print(f"Agent: {''.join(agent_messages)}")
+
+        print(f"Completed: {stop_reason}")
 
 asyncio.run(main())
 ```
+
+> **Key Point**: To capture `session/update` notifications, you need to manually handle the request/response loop instead of using `send_session_prompt()`, which discards notifications. See `examples/simple_client.py` for a complete working example.
 
 ### Example 3: Agent with File System Access
 
@@ -502,6 +730,66 @@ asyncio.run(main())
 
 ## API Reference
 
+### Protocol Helpers
+
+#### JSON-RPC Message Helpers
+
+Build protocol messages using library helpers:
+
+```python
+from chuk_acp.protocol import (
+    create_request,
+    create_response,
+    create_error_response,
+    create_notification,
+)
+
+# Create a request
+request = create_request(
+    method="session/prompt",
+    params={"sessionId": "session-1", "prompt": [...]},
+    id="req-123"
+)
+
+# Create a response
+response = create_response(id="req-123", result={"stopReason": "end_turn"})
+
+# Create an error response
+error = create_error_response(id="req-123", code=-32603, message="Internal error")
+
+# Create a notification
+notification = create_notification(
+    method="session/update",
+    params={"sessionId": "session-1", "agentMessageChunk": {...}}
+)
+```
+
+#### Method Constants
+
+Use constants instead of string literals for protocol methods:
+
+```python
+from chuk_acp.protocol import (
+    METHOD_INITIALIZE,
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+    METHOD_SESSION_CANCEL,
+    METHOD_FS_READ_TEXT_FILE,
+    METHOD_FS_WRITE_TEXT_FILE,
+    METHOD_TERMINAL_CREATE,
+    # ... and more
+)
+
+# Use in message routing
+if method == METHOD_INITIALIZE:
+    # Handle initialize
+    pass
+elif method == METHOD_SESSION_PROMPT:
+    # Handle prompt
+    pass
+```
+
 ### Transport
 
 #### `stdio_transport(command, args)`
@@ -563,6 +851,8 @@ result = await send_session_prompt(
 )
 # result.stopReason: end_turn, max_tokens, cancelled, refusal
 ```
+
+> **Note**: `send_session_prompt` discards `session/update` notifications from the agent. To capture agent responses (message chunks, thoughts, tool calls), manually handle the request/response loop. See Example 2 or `examples/simple_client.py` for details.
 
 #### `send_session_cancel(write, session_id)`
 

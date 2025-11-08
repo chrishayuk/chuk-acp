@@ -5,6 +5,7 @@ This example shows the minimal steps needed to:
 1. Connect to an ACP agent via stdio
 2. Perform the initialization handshake
 3. Send a prompt and receive a response
+4. Capture the agent's response via session/update notifications
 
 Usage:
     python examples/quick_start.py
@@ -12,59 +13,100 @@ Usage:
 
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 import anyio
 
 from chuk_acp.protocol.types import ClientInfo, ClientCapabilities, TextContent
 from chuk_acp.protocol.messages.initialize import send_initialize
-from chuk_acp.protocol.messages.session import send_session_new, send_session_prompt
+from chuk_acp.protocol.messages.session import send_session_new
+from chuk_acp.protocol import (
+    create_request,
+    JSONRPCNotification,
+    JSONRPCResponse,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+)
 from chuk_acp.transport.stdio import stdio_transport
 
 
-# Simple echo agent that responds to ACP protocol
+# Simple echo agent that demonstrates using chuk-acp library
 SIMPLE_AGENT = '''
 import sys
 import json
 
+# Import chuk-acp library components
+from chuk_acp.protocol import (
+    create_response,
+    create_error_response,
+    create_notification,
+    METHOD_INITIALIZE,
+    METHOD_SESSION_NEW,
+    METHOD_SESSION_PROMPT,
+    METHOD_SESSION_UPDATE,
+)
+from chuk_acp.protocol.types import AgentInfo, AgentCapabilities, TextContent
+
 def handle_message(msg):
-    """Handle incoming messages."""
+    """Handle incoming messages using chuk-acp library."""
     method = msg.get("method")
     msg_id = msg.get("id")
     params = msg.get("params", {})
 
-    if method == "initialize":
-        return {
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
+    try:
+        if method == METHOD_INITIALIZE:
+            # Use library types for structured data
+            agent_info = AgentInfo(name="echo-agent", version="1.0.0")
+            agent_capabilities = AgentCapabilities()
+
+            result = {
                 "protocolVersion": 1,
-                "agentInfo": {"name": "echo-agent", "version": "1.0.0"},
-                "agentCapabilities": {}
+                "agentInfo": agent_info.model_dump(exclude_none=True),
+                "agentCapabilities": agent_capabilities.model_dump(exclude_none=True)
             }
-        }
-    elif method == "session/new":
-        return {
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {"sessionId": "session-1"}
-        }
-    elif method == "session/prompt":
-        prompt = params.get("prompt", [])
-        text = prompt[0].get("text", "") if prompt else ""
-        return {
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
-                "stopReason": "end_turn",
-                "agentMessage": [{"type": "text", "text": f"Echo: {text}"}]
-            }
-        }
-    return {
-        "jsonrpc": "2.0",
-        "id": msg_id,
-        "error": {"code": -32601, "message": "Method not found"}
-    }
+            response = create_response(id=msg_id, result=result)
+
+        elif method == METHOD_SESSION_NEW:
+            result = {"sessionId": "session-1"}
+            response = create_response(id=msg_id, result=result)
+
+        elif method == METHOD_SESSION_PROMPT:
+            # Extract the prompt text
+            session_id = params.get("sessionId")
+            prompt = params.get("prompt", [])
+            prompt_text = prompt[0].get("text", "") if prompt else ""
+
+            # Send a session/update notification with the echo
+            notification = create_notification(
+                method=METHOD_SESSION_UPDATE,
+                params={
+                    "sessionId": session_id,
+                    "agentMessageChunk": TextContent(
+                        text=f"Echo: {prompt_text}"
+                    ).model_dump(exclude_none=True)
+                }
+            )
+            sys.stdout.write(json.dumps(notification.model_dump(exclude_none=True)) + "\\n")
+            sys.stdout.flush()
+
+            # Send the response
+            result = {"stopReason": "end_turn"}
+            response = create_response(id=msg_id, result=result)
+
+        else:
+            # Use library helper for errors
+            response = create_error_response(
+                id=msg_id,
+                code=-32601,
+                message="Method not found"
+            )
+
+        return response.model_dump(exclude_none=True)
+
+    except Exception as e:
+        response = create_error_response(id=msg_id, code=-32603, message=str(e))
+        return response.model_dump(exclude_none=True)
 
 while True:
     line = sys.stdin.readline()
@@ -110,19 +152,53 @@ async def main():
             session = await send_session_new(read, write, cwd="/tmp")
             print(f"   Session ID: {session.sessionId}")
 
-            # Step 5: Send a prompt
+            # Step 5: Send a prompt and capture the agent's response
             print("5. Sending prompt...")
-            result = await send_session_prompt(
-                read,
-                write,
-                session_id=session.sessionId,
-                prompt=[TextContent(text="Hello, Agent!")],
+            prompt_text = "Hello, Agent!"
+            print(f"   User: {prompt_text}")
+
+            # Send the request manually to capture session/update notifications
+            request_id = str(uuid.uuid4())
+            request = create_request(
+                method=METHOD_SESSION_PROMPT,
+                params={
+                    "sessionId": session.sessionId,
+                    "prompt": [TextContent(text=prompt_text).model_dump(exclude_none=True)],
+                },
+                id=request_id,
             )
+            await write.send(request)
+
+            # Collect agent responses from notifications
+            agent_messages = []
+            stop_reason = None
+
+            with anyio.fail_after(60.0):
+                while stop_reason is None:
+                    message = await read.receive()
+
+                    # Capture session/update notifications
+                    if isinstance(message, JSONRPCNotification):
+                        if message.method == METHOD_SESSION_UPDATE:
+                            params = message.params or {}
+                            if "agentMessageChunk" in params:
+                                chunk = params["agentMessageChunk"]
+                                if isinstance(chunk, dict) and "text" in chunk:
+                                    agent_messages.append(chunk["text"])
+
+                    # Handle the response
+                    elif isinstance(message, JSONRPCResponse):
+                        if message.id == request_id:
+                            result = message.result
+                            if isinstance(result, dict):
+                                stop_reason = result.get("stopReason")
 
             # Step 6: Display the response
+            if agent_messages:
+                print(f"   Agent: {''.join(agent_messages)}")
+
             print("\n✓ Success!")
-            print(f"   Stop Reason: {result.stopReason}")
-            print("   Response: Agent completed processing the prompt")
+            print(f"   Stop Reason: {stop_reason}")
 
     finally:
         # Cleanup

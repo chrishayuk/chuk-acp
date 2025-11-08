@@ -4,6 +4,13 @@ from typing import Optional, List, Dict, Any
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from .send_message import send_message, send_notification
+from ..constants import (
+    METHOD_TERMINAL_CREATE,
+    METHOD_TERMINAL_OUTPUT,
+    METHOD_TERMINAL_RELEASE,
+    METHOD_TERMINAL_WAIT_FOR_EXIT,
+    METHOD_TERMINAL_KILL,
+)
 from ..types import TerminalInfo, TerminalExit
 
 
@@ -46,7 +53,7 @@ async def send_terminal_create(
     result = await send_message(
         read_stream,
         write_stream,
-        method="terminal/create",
+        method=METHOD_TERMINAL_CREATE,
         params=params,
         timeout=timeout,
     )
@@ -76,7 +83,7 @@ async def send_terminal_output(
 
     await send_notification(
         write_stream,
-        method="terminal/output",
+        method=METHOD_TERMINAL_OUTPUT,
         params=params,
     )
 
@@ -104,7 +111,7 @@ async def send_terminal_release(
     await send_message(
         read_stream,
         write_stream,
-        method="terminal/release",
+        method=METHOD_TERMINAL_RELEASE,
         params=params,
         timeout=timeout,
     )
@@ -136,7 +143,7 @@ async def send_terminal_wait_for_exit(
     result = await send_message(
         read_stream,
         write_stream,
-        method="terminal/wait_for_exit",
+        method=METHOD_TERMINAL_WAIT_FOR_EXIT,
         params=params,
         timeout=timeout,
     )
@@ -167,7 +174,7 @@ async def send_terminal_kill(
     await send_message(
         read_stream,
         write_stream,
-        method="terminal/kill",
+        method=METHOD_TERMINAL_KILL,
         params=params,
         timeout=timeout,
     )

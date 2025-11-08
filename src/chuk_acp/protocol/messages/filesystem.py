@@ -4,6 +4,7 @@ from typing import Any
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 
 from .send_message import send_message
+from ..constants import METHOD_FS_READ_TEXT_FILE, METHOD_FS_WRITE_TEXT_FILE
 
 
 async def send_fs_read_text_file(
@@ -32,7 +33,7 @@ async def send_fs_read_text_file(
     result = await send_message(
         read_stream,
         write_stream,
-        method="fs/read_text_file",
+        method=METHOD_FS_READ_TEXT_FILE,
         params=params,
         timeout=timeout,
     )
@@ -68,7 +69,7 @@ async def send_fs_write_text_file(
     await send_message(
         read_stream,
         write_stream,
-        method="fs/write_text_file",
+        method=METHOD_FS_WRITE_TEXT_FILE,
         params=params,
         timeout=timeout,
     )
