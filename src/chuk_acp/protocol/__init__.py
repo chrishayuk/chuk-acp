@@ -14,6 +14,9 @@ from .jsonrpc import (
     RequestId,
 )
 from .constants import (
+    PROTOCOL_VERSION_0,
+    PROTOCOL_VERSION_1,
+    PROTOCOL_VERSION_CURRENT,
     METHOD_INITIALIZE,
     METHOD_AUTHENTICATE,
     METHOD_SESSION_NEW,
@@ -45,6 +48,10 @@ __all__ = [
     "create_response",
     "create_error_response",
     "RequestId",
+    # Protocol versions
+    "PROTOCOL_VERSION_0",
+    "PROTOCOL_VERSION_1",
+    "PROTOCOL_VERSION_CURRENT",
     # Method constants
     "METHOD_INITIALIZE",
     "METHOD_AUTHENTICATE",

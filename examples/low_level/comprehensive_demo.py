@@ -24,6 +24,7 @@ from chuk_acp.protocol.types import (
     ClientCapabilities,
     TextContent,
 )
+from chuk_acp.protocol import PROTOCOL_VERSION_CURRENT
 from chuk_acp.protocol.messages.initialize import send_initialize
 from chuk_acp.protocol.messages.session import (
     send_session_new,
@@ -56,6 +57,7 @@ from chuk_acp.protocol import (
     METHOD_FS_READ_TEXT_FILE,
     METHOD_FS_WRITE_TEXT_FILE,
     METHOD_TERMINAL_CREATE,
+    PROTOCOL_VERSION_CURRENT,
 )
 from chuk_acp.protocol.types import (
     AgentInfo,
@@ -229,7 +231,7 @@ async def run_demo() -> None:
             init_result = await send_initialize(
                 read_stream,
                 write_stream,
-                protocol_version=1,
+                protocol_version=PROTOCOL_VERSION_CURRENT,
                 client_info=client_info,
                 capabilities=client_capabilities,
             )

@@ -16,6 +16,7 @@ from chuk_acp.protocol import (
     METHOD_SESSION_NEW,
     METHOD_SESSION_PROMPT,
     METHOD_SESSION_UPDATE,
+    PROTOCOL_VERSION_CURRENT,
 )
 from chuk_acp.protocol.types import (
     AgentCapabilities,
@@ -143,8 +144,30 @@ class ACPAgent(ABC):
         agent_info = self.get_agent_info()
         agent_capabilities = self.get_agent_capabilities()
 
+        # Get protocol version from params, handling both int and string formats
+        client_protocol_version = params.get("protocolVersion", PROTOCOL_VERSION_CURRENT)
+
+        # Validate and convert protocol version to integer
+        # Some implementations incorrectly send date strings (like "2024-11-05") instead of integers
+        try:
+            if isinstance(client_protocol_version, str):
+                logger.warning(
+                    f"Client sent protocol version as string '{client_protocol_version}', "
+                    f"defaulting to {PROTOCOL_VERSION_CURRENT}"
+                )
+                protocol_version = PROTOCOL_VERSION_CURRENT
+            else:
+                # Use the minimum of client and agent versions (version negotiation)
+                protocol_version = min(int(client_protocol_version), PROTOCOL_VERSION_CURRENT)
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                f"Invalid protocol version '{client_protocol_version}': {e}, "
+                f"defaulting to {PROTOCOL_VERSION_CURRENT}"
+            )
+            protocol_version = PROTOCOL_VERSION_CURRENT
+
         return {
-            "protocolVersion": params.get("protocolVersion", 1),
+            "protocolVersion": protocol_version,
             "agentInfo": agent_info.model_dump(exclude_none=True),
             "agentCapabilities": agent_capabilities.model_dump(exclude_none=True),
         }

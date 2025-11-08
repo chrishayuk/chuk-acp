@@ -5,6 +5,14 @@ Using constants instead of string literals helps prevent typos and makes the cod
 more maintainable.
 """
 
+# Protocol version constants
+# The protocol version is an unsigned 16-bit integer (uint16) that identifies
+# the version of the Agent Client Protocol being used. This version is only
+# bumped for breaking changes. Non-breaking changes are introduced via capabilities.
+PROTOCOL_VERSION_0 = 0  # Initial protocol version
+PROTOCOL_VERSION_1 = 1  # Current stable protocol version
+PROTOCOL_VERSION_CURRENT = PROTOCOL_VERSION_1  # Latest supported version
+
 # Initialize and authentication
 METHOD_INITIALIZE = "initialize"
 METHOD_AUTHENTICATE = "authenticate"
@@ -30,6 +38,10 @@ METHOD_TERMINAL_WAIT_FOR_EXIT = "terminal/wait_for_exit"
 METHOD_TERMINAL_KILL = "terminal/kill"
 
 __all__ = [
+    # Protocol versions
+    "PROTOCOL_VERSION_0",
+    "PROTOCOL_VERSION_1",
+    "PROTOCOL_VERSION_CURRENT",
     # Initialize and authentication
     "METHOD_INITIALIZE",
     "METHOD_AUTHENTICATE",

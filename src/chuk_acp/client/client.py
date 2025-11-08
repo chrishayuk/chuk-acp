@@ -16,6 +16,7 @@ from ..protocol import (
     METHOD_INITIALIZE,
     METHOD_SESSION_NEW,
     METHOD_SESSION_PROMPT,
+    PROTOCOL_VERSION_CURRENT,
     JSONRPCNotification,
     JSONRPCResponse,
     JSONRPCRequest,
@@ -150,7 +151,7 @@ class ACPClient:
         init_request = create_request(
             method=METHOD_INITIALIZE,
             params={
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": PROTOCOL_VERSION_CURRENT,
                 "capabilities": {},
                 "clientInfo": self.client_info.model_dump(exclude_none=True),
             },

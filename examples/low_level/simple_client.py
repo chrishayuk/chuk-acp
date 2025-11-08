@@ -29,6 +29,7 @@ from chuk_acp.protocol import (
     JSONRPCResponse,
     METHOD_SESSION_PROMPT,
     METHOD_SESSION_UPDATE,
+    PROTOCOL_VERSION_CURRENT,
 )
 
 # Set up logging to see what's happening
@@ -54,7 +55,7 @@ async def main():
         init_result = await send_initialize(
             read,
             write,
-            protocol_version=1,  # Latest protocol version
+            protocol_version=PROTOCOL_VERSION_CURRENT,
             client_info=ClientInfo(
                 name="simple-client",
                 version="0.1.0",

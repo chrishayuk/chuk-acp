@@ -27,6 +27,7 @@ from chuk_acp.protocol import (
     JSONRPCResponse,
     METHOD_SESSION_PROMPT,
     METHOD_SESSION_UPDATE,
+    PROTOCOL_VERSION_CURRENT,
 )
 from chuk_acp.transport.stdio import stdio_transport
 
@@ -141,7 +142,7 @@ async def main():
             init_result = await send_initialize(
                 read,
                 write,
-                protocol_version=1,
+                protocol_version=PROTOCOL_VERSION_CURRENT,
                 client_info=ClientInfo(name="quick-start", version="1.0.0"),
                 capabilities=ClientCapabilities(),
             )
