@@ -521,11 +521,11 @@ if __name__ == "__main__":
 
 **Run your agent:**
 ```bash
-# Test with CLI
-chuk-acp python my_agent.py
+# Test with CLI (using uv for environment management)
+uvx chuk-acp client uv run my_agent.py
 
-# Or use with editors
-# Add to your editor's ACP configuration
+# Or if chuk-acp is installed globally
+chuk-acp client python my_agent.py
 ```
 
 **What `ACPAgent` does automatically:**
@@ -536,6 +536,34 @@ chuk-acp python my_agent.py
 - ✅ Stdin/stdout transport
 
 **Real example:** See [`examples/echo_agent.py`](examples/echo_agent.py) - a complete working agent in just 35 lines!
+
+#### 🚀 Even Easier: chuk-acp-agent
+
+For an even simpler agent-building experience, check out **[chuk-acp-agent](https://github.com/chrishayuk/chuk-acp-agent)** - an opinionated agent kit built on top of chuk-acp:
+
+```python
+from chuk_acp_agent import Agent, Context
+
+class MyAgent(Agent):
+    async def on_prompt(self, ctx: Context, prompt: str):
+        # Session memory
+        count = ctx.memory.get("count", 0) + 1
+        ctx.memory.set("count", count)
+
+        # Stream response
+        yield f"Message #{count}: {prompt}\n"
+
+if __name__ == "__main__":
+    MyAgent().run()
+```
+
+**Features:**
+- 📦 Batteries-included: session memory, streaming helpers, MCP integration
+- 🎯 Minimal boilerplate: just implement `on_prompt()`
+- 🔧 Context API: `ctx.memory`, `ctx.emit()`, `ctx.fs`, `ctx.terminal`
+- 🛠️ Built-in MCP tool support via `chuk-tool-processor`
+
+Install: `pip install chuk-acp-agent` or see the [chuk-acp-agent docs](https://github.com/chrishayuk/chuk-acp-agent).
 
 ---
 
