@@ -19,12 +19,23 @@
     "Example: Published Agent via uvx": {
       "command": "uvx",
       "args": [
-        "--from",
-        "your-agent-package",
-        "your-agent-command"
+        "chuk-acp",
+        "agent",
+        "python",
+        "/path/to/your/agent.py"
       ],
       "env": {},
-      "comment": "For production: publish your agent as a package and use uvx"
+      "comment": "Use 'chuk-acp agent' for passthrough mode (auto-installs chuk-acp package)"
+    },
+    "Example: Auto-detect mode": {
+      "command": "uvx",
+      "args": [
+        "chuk-acp",
+        "python",
+        "/path/to/your/agent.py"
+      ],
+      "env": {},
+      "comment": "Auto-detects passthrough mode when piped (from Zed). Explicitly use 'agent' subcommand for clarity."
     }
   }
 }

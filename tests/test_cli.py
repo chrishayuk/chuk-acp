@@ -84,7 +84,7 @@ class TestCreateParser:
         """Test parsing command."""
         parser = create_parser()
         args = parser.parse_args(["python", "agent.py"])
-        assert args.command == "python"
+        assert args.mode_or_command == "python"
         assert args.args == ["agent.py"]
 
     def test_parser_config(self):
@@ -271,7 +271,7 @@ class TestMain:
         """Test main with direct command."""
         monkeypatch.setattr(
             "sys.argv",
-            ["chuk-acp", python_exe, echo_agent_path, "--prompt", "Test"],
+            ["chuk-acp", "client", python_exe, echo_agent_path, "--prompt", "Test"],
         )
         await main()
 
@@ -287,7 +287,7 @@ class TestMain:
         try:
             monkeypatch.setattr(
                 "sys.argv",
-                ["chuk-acp", "--config", temp_path, "--prompt", "Test"],
+                ["chuk-acp", "--interactive", "--config", temp_path, "--prompt", "Test"],
             )
             await main()
         finally:
@@ -340,6 +340,7 @@ class TestMain:
             "sys.argv",
             [
                 "chuk-acp",
+                "client",
                 python_exe,
                 echo_agent_path,
                 "--env",
@@ -357,6 +358,7 @@ class TestMain:
             "sys.argv",
             [
                 "chuk-acp",
+                "client",
                 python_exe,
                 echo_agent_path,
                 "--cwd",
@@ -372,7 +374,7 @@ class TestMain:
         """Test main with invalid agent command."""
         monkeypatch.setattr(
             "sys.argv",
-            ["chuk-acp", "nonexistent_command", "--prompt", "Test"],
+            ["chuk-acp", "client", "nonexistent_command", "--prompt", "Test"],
         )
         with pytest.raises(SystemExit):
             await main()
@@ -384,7 +386,7 @@ class TestMain:
         """Test main with verbose flag on error."""
         monkeypatch.setattr(
             "sys.argv",
-            ["chuk-acp", "nonexistent_command", "--verbose"],
+            ["chuk-acp", "client", "nonexistent_command", "--verbose"],
         )
         with pytest.raises(SystemExit):
             await main()
@@ -432,7 +434,7 @@ class TestCLIIntegration:
         try:
             monkeypatch.setattr(
                 "sys.argv",
-                ["chuk-acp", "--config", temp_path, "--prompt", "Test"],
+                ["chuk-acp", "--interactive", "--config", temp_path, "--prompt", "Test"],
             )
             await main()
         finally:
@@ -445,6 +447,7 @@ class TestCLIIntegration:
             "sys.argv",
             [
                 "chuk-acp",
+                "client",
                 python_exe,
                 echo_agent_path,
                 "--client-name",
@@ -527,7 +530,7 @@ class TestCLIEntry:
         """Test successful CLI entry."""
         monkeypatch.setattr(
             "sys.argv",
-            ["chuk-acp", python_exe, echo_agent_path, "--prompt", "Test"],
+            ["chuk-acp", "client", python_exe, echo_agent_path, "--prompt", "Test"],
         )
         cli_entry()
 
@@ -538,7 +541,7 @@ class TestCLIEntry:
             raise KeyboardInterrupt()
 
         monkeypatch.setattr("chuk_acp.cli.asyncio.run", mock_run)
-        monkeypatch.setattr("sys.argv", ["chuk-acp", "python", "test.py"])
+        monkeypatch.setattr("sys.argv", ["chuk-acp", "client", "python", "test.py"])
 
         with pytest.raises(SystemExit) as exc_info:
             cli_entry()

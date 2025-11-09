@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import os
 import sys
 from typing import Optional
 
@@ -12,21 +13,27 @@ from chuk_acp.protocol.types import ClientInfo
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser for CLI."""
     parser = argparse.ArgumentParser(
-        description="Interactive client for Agent Client Protocol (ACP) agents",
+        description="Agent Client Protocol (ACP) tool - run agents or connect as a client",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Interactive mode with echo agent
+  # Auto-detect mode (interactive if TTY, passthrough if piped)
   chuk-acp python examples/echo_agent.py
 
+  # Explicit agent passthrough mode (for editors like Zed)
+  chuk-acp agent python my_agent.py
+
+  # Explicit interactive client mode
+  chuk-acp client python examples/echo_agent.py
+
+  # Force interactive mode even when piped
+  chuk-acp --interactive python examples/echo_agent.py
+
   # Single prompt
-  chuk-acp python examples/echo_agent.py --prompt "Hello!"
+  chuk-acp client python examples/echo_agent.py --prompt "Hello!"
 
   # Using a config file
   chuk-acp --config agent_config.json
-
-  # Connect to Kimi
-  chuk-acp kimi --acp
 
   # With working directory
   chuk-acp python agent.py --cwd /tmp
@@ -34,6 +41,14 @@ Examples:
   # With environment variables
   chuk-acp python agent.py --env DEBUG=true --env LOG_LEVEL=info
         """,
+    )
+
+    # Mode selection
+    parser.add_argument(
+        "--interactive",
+        "-i",
+        action="store_true",
+        help="Force interactive client mode even when stdin is not a TTY",
     )
 
     # Configuration options
@@ -46,10 +61,10 @@ Examples:
 
     # Direct command specification
     parser.add_argument(
-        "command",
+        "mode_or_command",
         type=str,
         nargs="?",
-        help="Command to run the agent (e.g., 'python', 'kimi')",
+        help="Mode ('agent' or 'client') or command to run (e.g., 'python', 'kimi')",
     )
     parser.add_argument(
         "args",
@@ -203,12 +218,61 @@ async def single_prompt_mode(client: ACPClient, prompt: str, verbose: bool = Fal
         print(f"\n[Stop reason: {result.stop_reason}]")
 
 
+def agent_passthrough_mode(config: AgentConfig) -> None:
+    """Run agent in passthrough mode - just execute the command directly.
+
+    This mode is used by editors like Zed that want to communicate directly
+    with the agent via stdio using the ACP protocol.
+
+    The agent process handles all protocol communication - we just exec it.
+    """
+    # Build the command
+    cmd = [config.command] + config.args
+
+    # Prepare environment
+    env = os.environ.copy()
+    if config.env:
+        env.update(config.env)
+
+    # Add Python unbuffered mode if running Python
+    if config.command == "python" or config.command == "python3":
+        cmd.insert(1, "-u")
+
+    # Execute the agent process, replacing this process
+    # This ensures stdio is directly connected
+    try:
+        os.execvpe(cmd[0], cmd, env)
+    except Exception as e:
+        print(f"Error executing agent: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 async def main() -> None:
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
 
-    # Determine how to create the client
+    # Determine mode and command
+    mode = None  # 'agent', 'client', or None for auto-detect
+    command = None
+    command_args = []
+
+    if args.mode_or_command:
+        if args.mode_or_command in ("agent", "client"):
+            # Explicit mode specified
+            mode = args.mode_or_command
+            if args.args:
+                command = args.args[0]
+                command_args = args.args[1:]
+            else:
+                print(f"Error: Mode '{mode}' requires a command to run", file=sys.stderr)
+                sys.exit(1)
+        else:
+            # No explicit mode, command is first arg
+            command = args.mode_or_command
+            command_args = args.args or []
+
+    # Determine configuration
     config: Optional[AgentConfig] = None
 
     if args.config:
@@ -221,53 +285,69 @@ async def main() -> None:
         except Exception as e:
             print(f"Error loading config: {e}", file=sys.stderr)
             sys.exit(1)
-    elif args.command:
+    elif command:
         # Create config from command line args
         env = parse_env_vars(args.env)
         config = AgentConfig(
-            command=args.command,
-            args=args.args or [],
+            command=command,
+            args=command_args,
             env=env,
             cwd=args.cwd,
         )
     else:
         print("Error: Either --config or command must be specified", file=sys.stderr)
         print("\nQuick examples:", file=sys.stderr)
-        print("  # Try the echo agent:", file=sys.stderr)
-        print("  chuk-acp python -m chuk_acp.examples.echo_agent", file=sys.stderr)
-        print("\n  # Or connect to an external agent:", file=sys.stderr)
-        print("  chuk-acp kimi --acp", file=sys.stderr)
-        print("\n  # Or use a config file:", file=sys.stderr)
-        print("  chuk-acp --config agent_config.json", file=sys.stderr)
+        print("  # Agent passthrough (for editors):", file=sys.stderr)
+        print("  chuk-acp agent python my_agent.py", file=sys.stderr)
+        print("\n  # Interactive client:", file=sys.stderr)
+        print("  chuk-acp client python my_agent.py", file=sys.stderr)
+        print("\n  # Auto-detect mode:", file=sys.stderr)
+        print("  chuk-acp python my_agent.py", file=sys.stderr)
         print("\nFor more help: chuk-acp --help", file=sys.stderr)
         sys.exit(1)
 
-    # Create client info
-    client_info = ClientInfo(
-        name=args.client_name,
-        version=args.client_version,
-    )
+    # Auto-detect mode if not explicitly set
+    if mode is None:
+        if args.interactive:
+            mode = "client"
+        elif sys.stdin.isatty():
+            # Interactive terminal - use client mode
+            mode = "client"
+        else:
+            # Piped input - use agent passthrough mode
+            mode = "agent"
 
-    # Connect to agent
-    try:
-        async with ACPClient.from_config(config, client_info=client_info) as client:
-            if args.prompt:
-                # Single prompt mode
-                await single_prompt_mode(client, args.prompt, args.verbose)
-            else:
-                # Interactive mode
-                await interactive_mode(client, args.verbose)
+    # Route to appropriate mode
+    if mode == "agent":
+        # Agent passthrough mode - exec the agent directly
+        # This does not return - it replaces the current process
+        agent_passthrough_mode(config)
+    else:
+        # Client mode - connect to agent and provide interactive interface
+        client_info = ClientInfo(
+            name=args.client_name,
+            version=args.client_version,
+        )
 
-    except FileNotFoundError as e:
-        print(f"Error: Agent command not found: {e}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error connecting to agent: {e}", file=sys.stderr)
-        if args.verbose:
-            import traceback
+        try:
+            async with ACPClient.from_config(config, client_info=client_info) as client:
+                if args.prompt:
+                    # Single prompt mode
+                    await single_prompt_mode(client, args.prompt, args.verbose)
+                else:
+                    # Interactive mode
+                    await interactive_mode(client, args.verbose)
 
-            traceback.print_exc()
-        sys.exit(1)
+        except FileNotFoundError as e:
+            print(f"Error: Agent command not found: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error connecting to agent: {e}", file=sys.stderr)
+            if args.verbose:
+                import traceback
+
+                traceback.print_exc()
+            sys.exit(1)
 
 
 def cli_entry() -> None:

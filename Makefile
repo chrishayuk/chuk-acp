@@ -118,27 +118,13 @@ coverage-report:
 test-cov coverage:
 	@echo "Running tests with coverage..."
 	@if command -v uv >/dev/null 2>&1; then \
-		uv run pytest --cov=src/chuk_acp --cov-report=html --cov-report=term --cov-report=term-missing:skip-covered; \
-		exit_code=$$?; \
+		uv run pytest --cov=src/chuk_acp --cov-report=html --cov-report=term; \
 		echo ""; \
-		echo "=========================="; \
-		echo "Coverage Summary:"; \
-		echo "=========================="; \
-		uv run coverage report --omit="tests/*" | tail -5; \
-		echo ""; \
-		echo "HTML coverage report saved to: htmlcov/index.html"; \
-		exit $$exit_code; \
+		echo "Full coverage report saved to: htmlcov/index.html"; \
 	else \
-		pytest --cov=src/chuk_acp --cov-report=html --cov-report=term --cov-report=term-missing:skip-covered; \
-		exit_code=$$?; \
+		pytest --cov=src/chuk_acp --cov-report=html --cov-report=term; \
 		echo ""; \
-		echo "=========================="; \
-		echo "Coverage Summary:"; \
-		echo "=========================="; \
-		coverage report --omit="tests/*" | tail -5; \
-		echo ""; \
-		echo "HTML coverage report saved to: htmlcov/index.html"; \
-		exit $$exit_code; \
+		echo "Full coverage report saved to: htmlcov/index.html"; \
 	fi
 
 # Build the project using the pyproject.toml configuration

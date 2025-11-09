@@ -121,7 +121,7 @@ The absolute fastest way to get started - no cloning, no installation:
 curl -O https://raw.githubusercontent.com/chuk-ai/chuk-acp/main/examples/standalone_agent.py
 
 # 2. Run it with uvx (automatically installs chuk-acp temporarily)
-uvx --from chuk-acp chuk-acp python standalone_agent.py
+uvx chuk-acp client python standalone_agent.py
 
 # That's it! Start chatting with your agent.
 ```
@@ -205,13 +205,22 @@ uv pip install -e ".[dev,pydantic]"
 
 The easiest way to interact with ACP agents is using the built-in CLI. Works instantly with `uvx` or after installation.
 
+The CLI supports three modes:
+
+1. **Agent passthrough** - For editors/tools (explicitly use `agent` subcommand)
+2. **Interactive client** - For humans (explicitly use `client` subcommand)
+3. **Auto-detect** - Smart mode selection (TTY = interactive, piped = passthrough)
+
 #### Try It Now (No Installation!)
 
 ```bash
 # Connect to Claude Code (requires ANTHROPIC_API_KEY)
-ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
+ANTHROPIC_API_KEY=sk-... uvx chuk-acp client claude-code-acp
 
 # Connect to Kimi agent
+uvx chuk-acp client kimi --acp
+
+# Auto-detect mode (same as 'client' when running in terminal)
 uvx chuk-acp kimi --acp
 
 # Interactive chat opens automatically
@@ -221,20 +230,29 @@ uvx chuk-acp kimi --acp
 #### After Installation
 
 ```bash
-# Interactive mode (default)
+# Interactive client mode (explicit)
+chuk-acp client python examples/echo_agent.py
+
+# Agent passthrough mode (for editors like Zed)
+chuk-acp agent python my_agent.py
+
+# Auto-detect mode (interactive if TTY, passthrough if piped)
 chuk-acp python examples/echo_agent.py
 
 # Single prompt and exit
-chuk-acp kimi --acp --prompt "Create a Python function to calculate factorial"
+chuk-acp client kimi --acp --prompt "Create a Python function to calculate factorial"
 
 # Using a config file
 chuk-acp --config examples/kimi_config.json
 
 # With environment variables
-chuk-acp python agent.py --env DEBUG=true --env API_KEY=xyz
+chuk-acp client python agent.py --env DEBUG=true --env API_KEY=xyz
+
+# Force interactive mode even when piped
+chuk-acp --interactive python agent.py
 
 # Verbose output for debugging
-chuk-acp python agent.py --verbose
+chuk-acp client python agent.py --verbose
 ```
 
 #### Interactive Mode Commands
@@ -310,6 +328,76 @@ chuk-acp --config kimi_config.json
 ```
 
 **📖 See [CLI.md](CLI.md) for complete CLI documentation and advanced usage.**
+
+### Using with Editors (Zed, VSCode, etc.)
+
+chuk-acp can run your custom agents in editors that support ACP, like Zed. The `agent` mode provides a passthrough that lets editors communicate directly with your agent via the ACP protocol.
+
+#### Zed Configuration
+
+Add this to your Zed `settings.json` (usually `~/.config/zed/settings.json`):
+
+```json
+{
+  "agent_servers": {
+    "My Custom Agent": {
+      "command": "uvx",
+      "args": [
+        "chuk-acp",
+        "agent",
+        "python",
+        "/absolute/path/to/my_agent.py"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+Or using auto-detect mode (will automatically use passthrough when piped from Zed):
+
+```json
+{
+  "agent_servers": {
+    "My Custom Agent": {
+      "command": "uvx",
+      "args": [
+        "chuk-acp",
+        "python",
+        "/absolute/path/to/my_agent.py"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+**What this does:**
+- `uvx` automatically installs `chuk-acp` in a temporary environment
+- `chuk-acp agent` runs in passthrough mode (just executes your agent with the ACP protocol layer)
+- Your agent gets access to the `chuk-acp` package (so `from chuk_acp.agent import ACPAgent` works)
+- No `--from` or `--with` flags needed!
+
+**Example agent file** (`my_agent.py`):
+
+```python
+from typing import List
+from chuk_acp.agent import ACPAgent, AgentSession
+from chuk_acp.protocol.types import AgentInfo, Content
+
+class MyAgent(ACPAgent):
+    def get_agent_info(self) -> AgentInfo:
+        return AgentInfo(name="my-agent", version="1.0.0")
+
+    async def handle_prompt(self, session: AgentSession, prompt: List[Content]) -> str:
+        text = prompt[0].get("text", "") if prompt else ""
+        return f"You said: {text}"
+
+if __name__ == "__main__":
+    MyAgent().run()
+```
+
+See [`examples/zed_config.json`](examples/zed_config.json) for more configuration examples.
 
 ### The Easiest Way: ACPClient
 
