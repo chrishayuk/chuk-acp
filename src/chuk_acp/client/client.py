@@ -189,7 +189,10 @@ class ACPClient:
 
         session_request = create_request(
             method=METHOD_SESSION_NEW,
-            params={"cwd": cwd or self.default_cwd},
+            params={
+                "cwd": cwd or self.default_cwd,
+                "mcpServers": [],  # Send empty array for agents that require mcpServers
+            },
             id=str(uuid.uuid4()),
         )
         await self._write_stream.send(session_request)

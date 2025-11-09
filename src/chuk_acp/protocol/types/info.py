@@ -10,10 +10,10 @@ if PYDANTIC_AVAILABLE:
 class AgentInfo(AcpPydanticBase):
     """Information about the agent implementation."""
 
-    name: str
+    name: str = "unknown"
     """The programmatic name of the agent."""
 
-    version: str
+    version: str = "0.0.0"
     """Version of the agent implementation."""
 
     title: Optional[str] = None

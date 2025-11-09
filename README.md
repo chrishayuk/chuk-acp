@@ -41,7 +41,7 @@ The **Agent Client Protocol (ACP)** is to AI coding agents what the Language Ser
 
 **chuk-acp** provides a complete, production-ready Python implementation of ACP, enabling you to:
 
-- 💬 **Interact with agents instantly** using the CLI (`uvx chuk-acp claude-code-acp` or `uvx chuk-acp kimi --acp`)
+- 💬 **Interact with agents instantly** using the CLI (`uvx chuk-acp claude-code-acp` or `echo "hello" | uvx chuk-acp client -- kimi --acp`)
 - 🤖 **Build ACP-compliant coding agents** easily with the high-level `ACPAgent` API
 - 🖥️ **Build editors/IDEs** that can connect to any ACP-compliant agent with `ACPClient`
 - 🔌 **Integrate AI capabilities** into existing development tools
@@ -82,6 +82,8 @@ Think LSP for language tooling, but for AI coding agents.
 - All baseline methods and content types
 - Optional capabilities (modes, session loading, file system, terminal)
 - Protocol compliance test suite
+- **MCP Servers Support**: Automatically sends empty `mcpServers: []` for compatibility with agents that require it
+- **Flexible AgentInfo**: Handles agents that return incomplete initialization data
 
 ### 🔧 Developer-Friendly
 
@@ -135,7 +137,7 @@ See [QUICKSTART.md](QUICKSTART.md) for full details.
 ANTHROPIC_API_KEY=sk-... uvx chuk-acp claude-code-acp
 
 # Kimi (Chinese AI assistant)
-uvx chuk-acp kimi --acp
+uvx chuk-acp client -- kimi --acp
 ```
 
 **That's it!** `uvx` automatically handles installation. Perfect for quick testing.
@@ -149,8 +151,8 @@ uvx chuk-acp kimi --acp
 No installation needed! `uvx` runs the CLI directly:
 
 ```bash
-# Single prompt mode
-uvx chuk-acp kimi --acp --prompt "Create a Python function to calculate fibonacci"
+# Single prompt mode (interactive with stdin)
+echo "Create a Python function to calculate fibonacci" | uvx chuk-acp client -- kimi --acp
 
 # With faster validation (optional)
 uvx --from 'chuk-acp[pydantic]' chuk-acp claude-code-acp
@@ -217,11 +219,11 @@ The CLI supports three modes:
 # Connect to Claude Code (requires ANTHROPIC_API_KEY)
 ANTHROPIC_API_KEY=sk-... uvx chuk-acp client claude-code-acp
 
-# Connect to Kimi agent
-uvx chuk-acp client kimi --acp
+# Connect to Kimi agent (use -- to separate flags)
+echo "hello" | uvx chuk-acp client -- kimi --acp
 
-# Auto-detect mode (same as 'client' when running in terminal)
-uvx chuk-acp kimi --acp
+# Interactive mode with verbose output
+echo "your question" | uvx chuk-acp --verbose client -- kimi --acp
 
 # Interactive chat opens automatically
 # Just start typing your questions!
@@ -239,8 +241,8 @@ chuk-acp agent python my_agent.py
 # Auto-detect mode (interactive if TTY, passthrough if piped)
 chuk-acp python examples/echo_agent.py
 
-# Single prompt and exit
-chuk-acp client kimi --acp --prompt "Create a Python function to calculate factorial"
+# Single prompt (requires stdin for kimi)
+echo "Create a Python function to calculate factorial" | chuk-acp client -- kimi --acp
 
 # Using a config file
 chuk-acp --config examples/kimi_config.json
@@ -291,10 +293,9 @@ Goodbye!
 
 **With Kimi:**
 ```bash
-$ uvx chuk-acp kimi --acp
+$ echo "What's the best way to handle async errors in Python?" | uvx chuk-acp client -- kimi --acp
 
-You: What's the best way to handle async errors in Python?
-Agent: [Kimi's response...]
+Agent: [Kimi's response with thinking and detailed explanation...]
 ```
 
 #### Configuration Files
@@ -326,6 +327,20 @@ Then use with:
 chuk-acp --config claude_code_config.json
 chuk-acp --config kimi_config.json
 ```
+
+#### Important: Using `--` for Agent Flags
+
+When an agent requires flags (like `kimi --acp`), use `--` to separate chuk-acp flags from agent arguments:
+
+```bash
+# Correct - use -- separator
+chuk-acp client -- kimi --acp
+
+# Also works via config file
+chuk-acp --config kimi_config.json
+```
+
+Without `--`, argparse treats `--acp` as a chuk-acp flag and fails. Using a config file avoids this issue entirely.
 
 **📖 See [CLI.md](CLI.md) for complete CLI documentation and advanced usage.**
 
