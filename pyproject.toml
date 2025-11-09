@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chuk-acp"
-version = "0.3.1"
+version = "0.3.2"
 description = "Agent Client Protocol (ACP) implementation for Python"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -60,9 +60,8 @@ packages = ["src/chuk_acp"]
 "examples" = "share/chuk-acp/examples"
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "src/chuk_acp/py.typed",
-]
+# py.typed is automatically included from src/chuk_acp/
+# No need for explicit include - it would override defaults
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
