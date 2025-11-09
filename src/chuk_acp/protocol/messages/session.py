@@ -17,7 +17,6 @@ from ..types import (
     Content,
     MCPServer,
     SessionMode,
-    SessionUpdate,
     StopReason,
     Plan,
     ToolCall,
@@ -261,17 +260,17 @@ async def send_session_update(
 
     # Handle agent message chunks with new protocol format
     if agent_message_chunk:
-        session_update = SessionUpdate(
-            sessionUpdate="agent_message_chunk", content=agent_message_chunk
-        )
-        params["update"] = session_update.model_dump(exclude_none=True)
+        params["update"] = {
+            "sessionUpdate": "agent_message_chunk",
+            "content": agent_message_chunk.model_dump(exclude_none=True),
+        }
 
     # Handle user message chunks with new protocol format
     elif user_message_chunk:
-        session_update = SessionUpdate(
-            sessionUpdate="user_message_chunk", content=user_message_chunk
-        )
-        params["update"] = session_update.model_dump(exclude_none=True)
+        params["update"] = {
+            "sessionUpdate": "user_message_chunk",
+            "content": user_message_chunk.model_dump(exclude_none=True),
+        }
 
     # Other update types (plan, thought, tool_call, etc.) are added directly to params
     # TODO: These should also be wrapped in SessionUpdate eventually for full protocol compliance

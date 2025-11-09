@@ -22,7 +22,6 @@ from chuk_acp.protocol.types import (
     AgentCapabilities,
     AgentInfo,
     Content,
-    SessionUpdate,
     TextContent,
 )
 
@@ -124,15 +123,16 @@ class ACPAgent(ABC):
             session_id: Session to send to
         """
         text_content = TextContent(text=text)
-        session_update = SessionUpdate(
-            sessionUpdate="agent_message_chunk",
-            content=text_content,
-        )
+        # Build the update dict manually to ensure proper serialization
+        update_dict = {
+            "sessionUpdate": "agent_message_chunk",
+            "content": text_content.model_dump(exclude_none=True),
+        }
         update_notification = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": session_id,
-                "update": session_update.model_dump(exclude_none=True),
+                "update": update_dict,
             },
         )
         self._write_message(update_notification.model_dump(exclude_none=True))
@@ -205,8 +205,9 @@ class ACPAgent(ABC):
         # Call the user's handler
         response_text = await self.handle_prompt(session, prompt)
 
-        # Send the response as a message chunk
-        self.send_message(response_text, session_id)
+        # Send the response as a message chunk (if not empty)
+        if response_text:
+            self.send_message(response_text, session_id)
 
         # Return stop reason
         return {"stopReason": "end_turn"}
