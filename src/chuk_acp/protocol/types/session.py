@@ -2,6 +2,7 @@
 
 from typing import Optional, Literal
 from ..acp_pydantic_base import AcpPydanticBase, PYDANTIC_AVAILABLE
+from .content import Content
 
 if PYDANTIC_AVAILABLE:
     from ..acp_pydantic_base import ConfigDict
@@ -19,6 +20,31 @@ StopReason = Literal[
     "refusal",
     "cancelled",
 ]
+
+
+# Session update types
+SessionUpdateType = Literal[
+    "agent_message_chunk",
+    "user_message_chunk",
+    "plan",
+    "thought",
+    "tool_call",
+    "tool_call_update",
+    "available_commands_update",
+]
+
+
+class SessionUpdate(AcpPydanticBase):
+    """Session update wrapper for all update types."""
+
+    sessionUpdate: SessionUpdateType
+    """Type of session update."""
+
+    content: Optional[Content] = None
+    """Content for message chunks (agent_message_chunk or user_message_chunk)."""
+
+    if PYDANTIC_AVAILABLE:
+        model_config = ConfigDict(extra="allow")
 
 
 class Location(AcpPydanticBase):

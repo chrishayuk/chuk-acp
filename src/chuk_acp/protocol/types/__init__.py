@@ -21,7 +21,7 @@ from .capabilities import (
     AgentCapabilities,
 )
 from .mcp_servers import StdioMCPServer, HttpMCPServer, SseMCPServer, MCPServer
-from .session import SessionMode, StopReason, Location
+from .session import SessionMode, StopReason, SessionUpdateType, SessionUpdate, Location
 from .tools import ToolCallStatus, ToolCall, ToolCallUpdate
 from .plan import PlanEntryStatus, PlanEntryPriority, PlanEntry, Plan, Task, TaskStatus
 from .permission import PermissionRequest, PermissionResponse
@@ -57,6 +57,8 @@ __all__ = [
     # Session
     "SessionMode",
     "StopReason",
+    "SessionUpdateType",
+    "SessionUpdate",
     "Location",
     # Tools
     "ToolCallStatus",

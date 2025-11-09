@@ -21,10 +21,17 @@ class SessionUpdate:
         params = notification.params or {}
         self.session_id = params.get("sessionId")
 
-        # Extract agent message chunk
-        chunk = params.get("agentMessageChunk")
-        if chunk and isinstance(chunk, dict):
-            self.agent_message = chunk.get("text")
+        # Extract agent message chunk from update
+        update = params.get("update")
+        if update and isinstance(update, dict):
+            if update.get("sessionUpdate") == "agent_message_chunk":
+                content = update.get("content", {})
+                if isinstance(content, dict):
+                    self.agent_message = content.get("text")
+                else:
+                    self.agent_message = None
+            else:
+                self.agent_message = None
         else:
             self.agent_message = None
 

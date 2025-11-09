@@ -22,6 +22,7 @@ from chuk_acp.protocol.types import (
     AgentCapabilities,
     AgentInfo,
     Content,
+    SessionUpdate,
     TextContent,
 )
 
@@ -123,19 +124,26 @@ class ACPAgent(ABC):
             session_id: Session to send to
         """
         text_content = TextContent(text=text)
+        session_update = SessionUpdate(
+            sessionUpdate="agent_message_chunk",
+            content=text_content,
+        )
         update_notification = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": session_id,
-                "agentMessageChunk": text_content.model_dump(exclude_none=True),
+                "update": session_update.model_dump(exclude_none=True),
             },
         )
         self._write_message(update_notification.model_dump(exclude_none=True))
 
     def _write_message(self, message: Dict[str, Any]) -> None:
         """Write a message to stdout."""
-        sys.stdout.write(json.dumps(message) + "\n")
+        json_str = json.dumps(message)
+        logger.debug(f"Writing to stdout: {json_str}")
+        sys.stdout.write(json_str + "\n")
         sys.stdout.flush()
+        logger.debug("Flushed stdout")
 
     def _handle_initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle initialize request."""

@@ -226,8 +226,25 @@ def agent_passthrough_mode(config: AgentConfig) -> None:
 
     The agent process handles all protocol communication - we just exec it.
     """
+    import logging
+
+    # Set up debug logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename=os.path.expanduser("~/chuk_acp_passthrough.log"),
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    logger = logging.getLogger(__name__)
+
     # Build the command
     cmd = [config.command] + config.args
+
+    logger.debug("Agent passthrough mode starting")
+    logger.debug(f"Command: {config.command}")
+    logger.debug(f"Args: {config.args}")
+    logger.debug(f"Full command: {cmd}")
+    logger.debug(f"CWD: {config.cwd}")
+    logger.debug(f"Env: {config.env}")
 
     # Prepare environment
     env = os.environ.copy()
@@ -237,12 +254,15 @@ def agent_passthrough_mode(config: AgentConfig) -> None:
     # Add Python unbuffered mode if running Python
     if config.command == "python" or config.command == "python3":
         cmd.insert(1, "-u")
+        logger.debug(f"Added -u flag, command now: {cmd}")
 
     # Execute the agent process, replacing this process
     # This ensures stdio is directly connected
     try:
+        logger.debug(f"Executing: {cmd[0]} with args {cmd}")
         os.execvpe(cmd[0], cmd, env)
     except Exception as e:
+        logger.error(f"Error executing agent: {e}")
         print(f"Error executing agent: {e}", file=sys.stderr)
         sys.exit(1)
 

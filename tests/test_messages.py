@@ -330,8 +330,11 @@ class TestSessionMessages:
         assert notif.method == "session/update"
         assert notif.params["sessionId"] == "session-123"
         assert "plan" in notif.params
-        assert "agentMessageChunk" in notif.params
-        assert "userMessageChunk" in notif.params
+        # Agent message chunk is now wrapped in update
+        assert "update" in notif.params
+        assert notif.params["update"]["sessionUpdate"] == "agent_message_chunk"
+        assert "content" in notif.params["update"]
+        # User message chunk would be in a separate notification
         assert "thought" in notif.params
         assert "toolCall" in notif.params
         assert "toolCallUpdate" in notif.params

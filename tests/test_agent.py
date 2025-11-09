@@ -118,8 +118,9 @@ class TestACPAgent:
 
             assert call_args["method"] == "session/update"
             assert call_args["params"]["sessionId"] == "session-123"
-            assert call_args["params"]["agentMessageChunk"]["type"] == "text"
-            assert call_args["params"]["agentMessageChunk"]["text"] == "Test message"
+            assert call_args["params"]["update"]["sessionUpdate"] == "agent_message_chunk"
+            assert call_args["params"]["update"]["content"]["type"] == "text"
+            assert call_args["params"]["update"]["content"]["text"] == "Test message"
 
     def test_write_message(self):
         """Test _write_message writes to stdout."""

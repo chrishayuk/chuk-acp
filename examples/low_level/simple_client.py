@@ -114,10 +114,11 @@ async def main():
                 if isinstance(message, JSONRPCNotification):
                     if message.method == METHOD_SESSION_UPDATE:
                         params = message.params or {}
-                        if "agentMessageChunk" in params:
-                            chunk = params["agentMessageChunk"]
-                            if isinstance(chunk, dict) and "text" in chunk:
-                                agent_messages.append(chunk["text"])
+                        update = params.get("update", {})
+                        if update.get("sessionUpdate") == "agent_message_chunk":
+                            content = update.get("content", {})
+                            if isinstance(content, dict) and "text" in content:
+                                agent_messages.append(content["text"])
 
                 # Handle the response
                 elif isinstance(message, JSONRPCResponse):

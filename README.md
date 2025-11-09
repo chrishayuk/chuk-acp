@@ -606,11 +606,17 @@ for line in sys.stdin:
         user_text = params["prompt"][0].get("text", "")
 
         # Send a notification with the echo
+        from chuk_acp.protocol.types import SessionUpdate
+
+        session_update = SessionUpdate(
+            sessionUpdate="agent_message_chunk",
+            content=TextContent(text=f"Echo: {user_text}")
+        )
         notification = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": session_id,
-                "agentMessageChunk": TextContent(text=f"Echo: {user_text}").model_dump(),
+                "update": session_update.model_dump(exclude_none=True),
             },
         )
         sys.stdout.write(json.dumps(notification.model_dump()) + "\n")
@@ -791,6 +797,7 @@ from chuk_acp.protocol import (
 from chuk_acp.protocol.types import (
     AgentInfo,
     AgentCapabilities,
+    SessionUpdate,
     TextContent,
 )
 
@@ -823,11 +830,16 @@ class EchoAgent:
             text=f"Echo: You said '{prompt[0].get('text', '')}'"
         )
 
+        session_update = SessionUpdate(
+            sessionUpdate="agent_message_chunk",
+            content=text_content
+        )
+
         notification = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": session_id,
-                "agentMessageChunk": text_content.model_dump(exclude_none=True),
+                "update": session_update.model_dump(exclude_none=True),
             },
         )
 
@@ -938,10 +950,11 @@ async def main():
                         params = message.params or {}
 
                         # Agent message chunks
-                        if "agentMessageChunk" in params:
-                            chunk = params["agentMessageChunk"]
-                            if isinstance(chunk, dict) and "text" in chunk:
-                                agent_messages.append(chunk["text"])
+                        update = params.get("update", {})
+                        if update.get("sessionUpdate") == "agent_message_chunk":
+                            content = update.get("content", {})
+                            if isinstance(content, dict) and "text" in content:
+                                agent_messages.append(content["text"])
 
                         # Thoughts (optional)
                         if "thought" in params:
@@ -1153,9 +1166,18 @@ response = create_response(id="req-123", result={"stopReason": "end_turn"})
 error = create_error_response(id="req-123", code=-32603, message="Internal error")
 
 # Create a notification
+from chuk_acp.protocol.types import SessionUpdate, TextContent
+
+session_update = SessionUpdate(
+    sessionUpdate="agent_message_chunk",
+    content=TextContent(text="Hello!")
+)
 notification = create_notification(
     method="session/update",
-    params={"sessionId": "session-1", "agentMessageChunk": {...}}
+    params={
+        "sessionId": "session-1",
+        "update": session_update.model_dump(exclude_none=True)
+    }
 )
 ```
 

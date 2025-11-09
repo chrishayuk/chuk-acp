@@ -28,7 +28,10 @@ class TestSessionUpdate:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "Hello from agent", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "Hello from agent", "type": "text"},
+                },
             },
         )
         update = SessionUpdate(notification)
@@ -56,7 +59,10 @@ class TestSessionUpdate:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "Done!", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "Done!", "type": "text"},
+                },
                 "stopReason": "end_turn",
             },
         )
@@ -82,7 +88,10 @@ class TestSessionUpdate:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"type": "text"},  # No text field
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"type": "text"},  # No text field
+                },
             },
         )
         update = SessionUpdate(notification)
@@ -90,12 +99,15 @@ class TestSessionUpdate:
         assert update.agent_message is None
 
     def test_chunk_as_non_dict(self):
-        """Test handling chunk as non-dictionary."""
+        """Test handling content as non-dictionary."""
         notification = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": "not a dict",
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": "not a dict",
+                },
             },
         )
         update = SessionUpdate(notification)
@@ -120,14 +132,20 @@ class TestPromptResult:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "Hello", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "Hello", "type": "text"},
+                },
             },
         )
         notification2 = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": " world!", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": " world!", "type": "text"},
+                },
             },
         )
 
@@ -146,14 +164,20 @@ class TestPromptResult:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "Hello", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "Hello", "type": "text"},
+                },
             },
         )
         notification2 = create_notification(
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": " world!", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": " world!", "type": "text"},
+                },
             },
         )
 
@@ -177,7 +201,10 @@ class TestPromptResult:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "Hello", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "Hello", "type": "text"},
+                },
             },
         )
         notification2 = create_notification(
@@ -191,7 +218,10 @@ class TestPromptResult:
             method=METHOD_SESSION_UPDATE,
             params={
                 "sessionId": "session-123",
-                "agentMessageChunk": {"text": "!", "type": "text"},
+                "update": {
+                    "sessionUpdate": "agent_message_chunk",
+                    "content": {"text": "!", "type": "text"},
+                },
             },
         )
 

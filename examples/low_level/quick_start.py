@@ -47,7 +47,7 @@ from chuk_acp.protocol import (
     METHOD_SESSION_PROMPT,
     METHOD_SESSION_UPDATE,
 )
-from chuk_acp.protocol.types import AgentInfo, AgentCapabilities, TextContent
+from chuk_acp.protocol.types import AgentInfo, AgentCapabilities, SessionUpdate, TextContent
 
 def handle_message(msg):
     """Handle incoming messages using chuk-acp library."""
@@ -79,13 +79,15 @@ def handle_message(msg):
             prompt_text = prompt[0].get("text", "") if prompt else ""
 
             # Send a session/update notification with the echo
+            session_update = SessionUpdate(
+                sessionUpdate="agent_message_chunk",
+                content=TextContent(text=f"Echo: {prompt_text}")
+            )
             notification = create_notification(
                 method=METHOD_SESSION_UPDATE,
                 params={
                     "sessionId": session_id,
-                    "agentMessageChunk": TextContent(
-                        text=f"Echo: {prompt_text}"
-                    ).model_dump(exclude_none=True)
+                    "update": session_update.model_dump(exclude_none=True)
                 }
             )
             sys.stdout.write(json.dumps(notification.model_dump(exclude_none=True)) + "\\n")
